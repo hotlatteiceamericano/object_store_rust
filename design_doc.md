@@ -11,7 +11,7 @@ S3-Like Object Store
 * use sled, Rust's embedded key-value store, suitable for prefix search
 * store the physical location of the object
 * schema:
-  * ObjectStore:
+  * Metadata:
     * object_id: u64
     * checksum: 
     * version:
