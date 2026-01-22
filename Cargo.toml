@@ -4,3 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = { version = "1.0", default-features = false }
+
+[dependencies.uuid]
+version = "1.19.0"
+# Lets you generate random UUIDs
+features = [
+    "v4",
+]

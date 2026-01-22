@@ -2,10 +2,10 @@ S3-Like Object Store
 
 # Object Store
 ## Requirements
-* Initially one file per object, then extend to support small file by packing different small objects to the same file
-* Hash the content, and use the first two characters as the first directory; third to fourth characters as the second directory as storing path
+* small file smaller than or equal to 10KB will be packed together with other smaller file in a single segment, until the segment exceed 100KB.
+* larger files bigger than 10KB will be stored in a standalong file
 * Object get assigned with an UUID
-* small object smaller than 100KB gets packed with other small files
+
 
 # Metadata Store
 * use sled, Rust's embedded key-value store, suitable for prefix search
@@ -19,10 +19,10 @@ S3-Like Object Store
 
   * StorageType
     * Packed
-      * segment_id: PathBuf
+      * segment_file_path: PathBuf
       * offset: u64
       * length: u64
-    * External:
+    * Standalone:
       * file_path: PathBuf
 
 # HTTP Layer
@@ -30,4 +30,6 @@ S3-Like Object Store
 * HTTP GET: given bucket, prefix and file_name, download object
 * HTTP GET: given bucket, optional prefix, return list of file names
 
+# Second Phase
+* Large file, presumably larger than 10MB, are supposed to be used streaming for uploading and dowloading instead of all being loaded into memory at once.
 

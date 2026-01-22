@@ -1,0 +1,16 @@
+use std::path::PathBuf;
+
+/// StorageType enum stores the types of storage,
+/// including Packed or Standalone.
+/// Packed is for those smaller file which will be packed together with other smaller object
+/// Standalone is for those bigger file which will use the entire file to store the object
+pub enum StorageType {
+    Packed {
+        segment_file_path: PathBuf,
+        offset: u64,
+        length: u64,
+    },
+    Standalone {
+        file_path: PathBuf,
+    },
+}
