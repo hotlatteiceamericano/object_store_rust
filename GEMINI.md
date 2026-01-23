@@ -48,6 +48,8 @@ This is a standard Rust project. You can use the following `cargo` commands to b
 
 ## Development Conventions
 
-*   The project follows standard Rust conventions.
+*   As this is the learning project, would like to be advised with Rust's best coding practices
 *   The code is organized into modules under the `src` directory.
 *   The `design_doc.md` file provides a high-level overview of the architecture and should be consulted before making significant changes.
+
+## Notes
