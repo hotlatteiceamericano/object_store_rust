@@ -1,1 +1,1 @@
-pub mod storage_type;
+pub mod store_type;

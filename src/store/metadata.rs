@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::common::storage_type::{self, StorageType};
+use crate::common::store_type::{self, StoreType};
 
 // todo: do I need a segment.rs or file.rs to save the object to disk?
 pub struct Metadata {
@@ -9,7 +9,7 @@ pub struct Metadata {
     name: String,
     prefix: String,
 
-    storage_type: Option<StorageType>,
+    store_type: Option<StoreType>,
 }
 
 impl Metadata {
@@ -19,7 +19,7 @@ impl Metadata {
             bucket: String::from(bucket),
             prefix: String::from(prefix),
             name: String::from(name),
-            storage_type: None,
+            store_type: None,
         }
     }
 
