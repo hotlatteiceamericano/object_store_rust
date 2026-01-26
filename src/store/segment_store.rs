@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Ok;
+use axum::body::Bytes;
 
 use crate::{common::store_type::StoreType, store::object_store::ObjectStore};
 
@@ -12,7 +13,7 @@ impl SegmentStore {
     }
 }
 impl ObjectStore for SegmentStore {
-    fn save(&self) -> anyhow::Result<crate::common::store_type::StoreType> {
+    fn save(&self, bytes: Bytes) -> anyhow::Result<crate::common::store_type::StoreType> {
         println!("saving the object to a segment!");
         Ok(StoreType::Packed {
             segment_file_path: PathBuf::from("./data/segments/1.segment"),

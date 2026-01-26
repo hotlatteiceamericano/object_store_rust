@@ -30,6 +30,9 @@ S3-Like Object Store
 * HTTP GET: given bucket, prefix and file_name, download object
 * HTTP GET: given bucket, optional prefix, return list of file names
 
+## Write Path
+main > http handlers > decide standalone or segement store based on file size > object store
+
 # Second Phase
 * Large file, presumably larger than 10MB, are supposed to be used streaming for uploading and dowloading instead of all being loaded into memory at once.
 

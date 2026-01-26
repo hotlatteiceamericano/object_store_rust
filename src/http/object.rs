@@ -28,11 +28,14 @@ pub async fn put_object(
     );
 
     let store_result = if body.len() <= SMALL_OBJECT_SIZE_THRESHOLD {
-        let storer = SegmentStore::new();
-        storer.save()
+        // let storer = SegmentStore::new();
+        let store = StandaloneStore::new();
+        store.save(body)
+
+        // save the metadata using the result from store.save
     } else {
-        let storer = StandaloneStore::new();
-        storer.save()
+        let store = StandaloneStore::new();
+        store.save(body)
     }?;
 
     Ok(format!("{:?}", store_result))
