@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Ok;
 use axum::body::Bytes;
@@ -20,5 +20,12 @@ impl ObjectStore for SegmentStore {
             offset: 0,
             length: 0,
         })
+    }
+
+    fn path() -> PathBuf {
+        std::env::current_dir()
+            .unwrap()
+            .join("store")
+            .join("segment")
     }
 }

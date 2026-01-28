@@ -46,10 +46,11 @@ This is a standard Rust project. You can use the following `cargo` commands to b
     cargo check
     ```
 
-## Development Conventions
+## Notes
 
 *   As this is the learning project, would like to be advised with Rust's best coding practices
 *   The code is organized into modules under the `src` directory.
 *   The `design_doc.md` file provides a high-level overview of the architecture and should be consulted before making significant changes.
+*   When asking questions, I would reather be adivsed first, and don't implement the code for me unless I specified
 
 ## Notes
