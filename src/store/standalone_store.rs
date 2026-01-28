@@ -21,14 +21,15 @@ impl StandaloneStore {
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
             .filter(|path| path.is_file())
-            .filter_map(|path| path.file_stem()?.to_str()?.parse::<u32>().ok())
-            .max();
+            .filter_map(|path| {
+                path.file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .and_then(|stem_str| stem_str.parse::<u32>().ok())
+            })
+            .max()
+            .map_or(0, |n| n + 1);
 
-        Ok(next_file_number
-            .and_then(|n| Some(n + 1))
-            .unwrap_or(0)
-            .to_string()
-            + Self::STORE_EXTENSION)
+        Ok(format!("{}.{}", next_file_number, Self::STORE_EXTENSION))
     }
 }
 
