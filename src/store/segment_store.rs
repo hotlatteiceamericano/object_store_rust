@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::Ok;
 use axum::body::Bytes;
@@ -13,7 +13,7 @@ impl SegmentStore {
     }
 }
 impl ObjectStore for SegmentStore {
-    fn save(&self, bytes: Bytes) -> anyhow::Result<crate::common::store_type::StoreType> {
+    fn save(&self, bytes: &Bytes) -> anyhow::Result<crate::common::store_type::StoreType> {
         println!("saving the object to a segment!");
         Ok(StoreType::Packed {
             segment_file_path: PathBuf::from("./data/segments/1.segment"),
@@ -27,5 +27,13 @@ impl ObjectStore for SegmentStore {
             .unwrap()
             .join("store")
             .join("segment")
+    }
+
+    async fn open(
+        &self,
+        file_name: &str,
+    ) -> anyhow::Result<futures::stream::BoxStream<'static, Result<Bytes, futures::io::Error>>>
+    {
+        todo!()
     }
 }

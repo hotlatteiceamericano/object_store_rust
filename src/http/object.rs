@@ -2,8 +2,7 @@ use std::path::Path;
 
 use axum::{body::Bytes, extract::Path as AxumPath, response::IntoResponse};
 use object_store_rust::store::{
-    app_error::AppError, object_store::ObjectStore, segment_store::SegmentStore,
-    standalone_store::StandaloneStore,
+    app_error::AppError, object_store::ObjectStore, standalone_store::StandaloneStore,
 };
 
 pub const SMALL_OBJECT_SIZE_THRESHOLD: usize = 30 * 1024 * 1024;
@@ -30,12 +29,12 @@ pub async fn put_object(
     let store_result = if body.len() <= SMALL_OBJECT_SIZE_THRESHOLD {
         // let storer = SegmentStore::new();
         let store = StandaloneStore::new();
-        store.save(body)
+        store.save(&body)
 
         // save the metadata using the result from store.save
     } else {
         let store = StandaloneStore::new();
-        store.save(body)
+        store.save(&body)
     }?;
 
     Ok(format!("{:?}", store_result))

@@ -1,7 +1,12 @@
 S3-Like Object Store
 
 # Object Store
-## Requirements
+## SegmentStore
+This type of object store handle the object storing for smaller file smaller than 30KB. As we are storing the files using files and each file has its own inode for its metadata, storing smaller files in individual files will consume too much of disk spaces. Hence they are stored together within the same file until the file size reaches the to-be-decided threshold.
+
+
+## StandaloneStore
+* This type of object store handle larger files. 
 * small file smaller than or equal to 10KB will be packed together with other smaller file in a single segment, until the segment exceed 100KB.
 * larger files bigger than 10KB will be stored in a standalong file
 * Object get assigned with an UUID
@@ -33,6 +38,12 @@ S3-Like Object Store
 ## Write Path
 main > http handlers > decide standalone or segement store based on file size > object store
 
-# Second Phase
-* Large file, presumably larger than 10MB, are supposed to be used streaming for uploading and dowloading instead of all being loaded into memory at once.
+# Future Phases
+* Support range read.
 
+# TODOs
+1. [] implement standalone store's read
+2. [] refactor standalone with async
+2. [] implement metadata
+3. [] refactor with async
+4. [] 
