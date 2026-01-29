@@ -1,10 +1,9 @@
 use axum::{
-    extract::DefaultBodyLimit,
-    routing::{get, put},
     Router,
+    routing::{get, put},
 };
 
-use crate::http::{object, root_handler};
+use crate::http::{object_handler, root_handler};
 
 pub mod http;
 
@@ -12,8 +11,9 @@ pub mod http;
 async fn main() {
     let app = Router::new()
         .route("/", get(root_handler::handle()))
-        .route("/object/:bucket/*key", put(object::put_object))
-        .layer(DefaultBodyLimit::max(10 * 1024 * 1024 * 1024));
+        .route("/object/:bucket/*key", put(object_handler::put_object))
+        // .route("/object/:bucket/*key", get(object_handler::))
+            ;
 
     let listner = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await

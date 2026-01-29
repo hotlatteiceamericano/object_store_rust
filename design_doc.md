@@ -42,8 +42,9 @@ main > http handlers > decide standalone or segement store based on file size > 
 * Support range read.
 
 # TODOs
-1. [] implement standalone store's read
-2. [] refactor standalone with async
-2. [] implement metadata
-3. [] refactor with async
-4. [] 
+1. [x] implement standalone store's read
+1. [x] refactor standalone with async
+1. [] implement metadata
+1. [] then implement object's read handler, so that it can locate the object with bucket, prefix and filename
+1. [] refactor object store's save with async
+1. [] 
