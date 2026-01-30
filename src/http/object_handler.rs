@@ -1,9 +1,19 @@
 use std::path::Path;
 
-use axum::{body::Bytes, extract::Path as AxumPath, response::IntoResponse};
-use object_store_rust::store::{
-    app_error::AppError, object_store::ObjectStore, standalone_store::StandaloneStore,
+use axum::{
+    body::Bytes,
+    extract::{Path as AxumPath, State},
+    response::IntoResponse,
 };
+use object_store_rust::{
+    common::store_type::StoreType,
+    store::{
+        app_error::AppError, metadata::Metadata, object_store::ObjectStore,
+        standalone_store::StandaloneStore,
+    },
+};
+
+use crate::http::app_state::AppState;
 
 pub const SMALL_OBJECT_SIZE_THRESHOLD: usize = 30 * 1024 * 1024;
 
@@ -13,8 +23,8 @@ pub async fn put_object(
     body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
     let std_path = Path::new(&key);
-    let prefixes = std_path.parent().and_then(|p| p.to_str()).unwrap_or("");
-    let file_name = std_path
+    let prefix = std_path.parent().and_then(|p| p.to_str()).unwrap_or("");
+    let filename = std_path
         .file_name()
         .and_then(|p| p.to_str())
         .unwrap_or(&key);
@@ -22,12 +32,12 @@ pub async fn put_object(
     println!(
         "received PUT request, bucket: {} prefixe: {}, file name: {}, object size: {}",
         bucket,
-        prefixes,
-        file_name,
+        prefix,
+        filename,
         body.len()
     );
 
-    let store_result = if body.len() <= SMALL_OBJECT_SIZE_THRESHOLD {
+    let store_type = if body.len() <= SMALL_OBJECT_SIZE_THRESHOLD {
         // let storer = SegmentStore::new();
         let store = StandaloneStore::new();
         store.save(&body)
@@ -38,7 +48,10 @@ pub async fn put_object(
         store.save(&body)
     }?;
 
-    Ok(format!("{:?}", store_result))
+    let metadata = Metadata::new(&bucket, &prefix, &filename).with_store_type(store_type);
+    metadata.save(&state.db)?;
+
+    Ok(format!("successfully save metadata: {:?}", metadata))
 }
 
 fn format_bytes(bytes: usize) -> String {

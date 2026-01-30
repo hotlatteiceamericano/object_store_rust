@@ -7,3 +7,7 @@
   1. for struct implements `Into<T>` trait, it means this struct can be converted to T type.
 5. for my case, I want to have my handler to return anyhow::Result in the axum http handler. I essentially need anyhow::Error -> AppError -> axum::IntoResponse. So that first the handler function can return Result<impl IntoResponse, AppError>.
   * next: ask if axum already implement IntoResponse for std::Result
+6. `impl Trait` v.s. `dyn Trait`: short summary, use `impl Trait` in return types; use `dyn Trait` as generic arguments
+7. store layer to only return Box<Stream>. It is handler's responsibility to return axum::IntoResponse but not store layer.
+8. anyhow also supports Option<>
+9. Chainable setter of course!
