@@ -1,4 +1,5 @@
 use std::{
+    fmt::{Debug, Display},
     fs,
     path::{Path, PathBuf},
 };
@@ -6,6 +7,7 @@ use std::{
 use anyhow::Context;
 use anyhow::Ok;
 use axum::body::Bytes as AxumBytes;
+use futures::StreamExt;
 use tokio::fs::File;
 use tokio_util::io::ReaderStream;
 
@@ -67,8 +69,8 @@ impl ObjectStore for StandaloneStore {
         let path = Self::path().join(file_name);
         let file = File::open(path).await?;
         let stream = ReaderStream::new(file);
-        // Ok(stream.boxed())
-        Ok(Box::pin(stream))
+
+        Ok(stream.boxed())
     }
 }
 
