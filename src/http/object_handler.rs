@@ -8,6 +8,7 @@ use object_store_rust::store::{
 pub const SMALL_OBJECT_SIZE_THRESHOLD: usize = 30 * 1024 * 1024;
 
 pub async fn put_object(
+    State(state): State<AppState>,
     AxumPath((bucket, key)): AxumPath<(String, String)>,
     body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
