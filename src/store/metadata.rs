@@ -23,9 +23,9 @@ impl Metadata {
         }
     }
 
-    pub fn save(&self, binary: &[u8]) -> anyhow::Result<()> {
-        // todo: implement the functionality to write the binary to disk
-        Ok(())
+    pub fn with_store_type(mut self, store_type: StoreType) -> Self {
+        self.store_type = Some(store_type);
+        self
     }
 
     pub fn read(&self, bucket: &str, prefix: &str, name: &str) -> anyhow::Result<()> {
