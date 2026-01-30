@@ -18,7 +18,6 @@ pub trait ObjectStore {
     /// Purposefully return BoxStream instead of axum::IntoResponse
     /// to decouple the store layer from http layer
     async fn open(
-        &self,
         file_name: &str,
         // ) -> anyhow::Result<BoxStream<'static, Result<Bytes, io::Error>>>;
     ) -> anyhow::Result<Pin<Box<dyn Stream<Item = Result<Bytes, io::Error>> + Send>>>;

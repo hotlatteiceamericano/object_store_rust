@@ -1,5 +1,4 @@
 use std::{
-    fmt::{Debug, Display},
     fs,
     path::{Path, PathBuf},
 };
@@ -62,7 +61,6 @@ impl ObjectStore for StandaloneStore {
     }
 
     async fn open(
-        &self,
         file_name: &str,
     ) -> anyhow::Result<futures::stream::BoxStream<'static, Result<AxumBytes, futures::io::Error>>>
     {
@@ -105,8 +103,7 @@ pub mod test {
         if let StoreType::Standalone { file_path } = store_type {
             assert!(file_path.file_name().is_some());
             let file_name = file_path.file_name().unwrap();
-            let mut stream = standalone_store
-                .open(file_name.to_str().unwrap())
+            let mut stream = StandaloneStore::open(file_name.to_str().unwrap())
                 .await
                 .unwrap();
 

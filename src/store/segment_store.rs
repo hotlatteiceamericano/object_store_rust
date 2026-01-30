@@ -30,7 +30,6 @@ impl ObjectStore for SegmentStore {
     }
 
     async fn open(
-        &self,
         file_name: &str,
     ) -> anyhow::Result<futures::stream::BoxStream<'static, Result<Bytes, futures::io::Error>>>
     {

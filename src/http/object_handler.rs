@@ -1,9 +1,11 @@
 use std::path::Path;
 
+use anyhow::Context;
 use axum::{
     body::Bytes,
     extract::{Path as AxumPath, State},
-    response::IntoResponse,
+    http::StatusCode,
+    response::{IntoResponse, Response},
 };
 use object_store_rust::{
     common::store_type::StoreType,
@@ -22,12 +24,7 @@ pub async fn put_object(
     AxumPath((bucket, key)): AxumPath<(String, String)>,
     body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
-    let std_path = Path::new(&key);
-    let prefix = std_path.parent().and_then(|p| p.to_str()).unwrap_or("");
-    let filename = std_path
-        .file_name()
-        .and_then(|p| p.to_str())
-        .unwrap_or(&key);
+    let (prefix, filename) = get_prefix_filename(&key);
 
     println!(
         "received PUT request, bucket: {} prefixe: {}, file name: {}, object size: {}",
@@ -52,6 +49,58 @@ pub async fn put_object(
     metadata.save(&state.db)?;
 
     Ok(format!("successfully save metadata: {:?}", metadata))
+}
+
+pub async fn get_object(
+    State(state): State<AppState>,
+    AxumPath((bucket, key)): AxumPath<(String, String)>,
+) -> Result<Response, AppError> {
+    let (prefix, filename) = get_prefix_filename(&key);
+
+    let metadata = Metadata::read(&state.db, &bucket, prefix, filename).context(format!(
+        "failed to read metadata with bucket: {}, prefix: {}, filename: {}",
+        bucket, prefix, filename
+    ))?;
+
+    // todo: read the Option and Result handling methods
+    let metadata = match metadata {
+        Some(m) => m,
+        None => return Ok(StatusCode::NOT_FOUND.into_response()),
+    };
+
+    let store_type = metadata
+        .store_type()
+        .as_ref()
+        .context("no store type found in metadata")?;
+
+    let path = match store_type {
+        StoreType::Packed { .. } => {
+            return Err(anyhow::anyhow!("packed storage type not supported yet").into());
+        }
+        StoreType::Standalone { file_path } => file_path,
+    };
+
+    let filename = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .context("invalid filename in store path")?;
+
+    let stream = StandaloneStore::open(filename)
+        .await
+        .context("failed to open object file")?;
+
+    Ok(axum::body::Body::from_stream(stream).into_response())
+}
+
+fn get_prefix_filename(key: &str) -> (&str, &str) {
+    let std_path = Path::new(key);
+    let prefix = std_path.parent().and_then(|p| p.to_str()).unwrap_or("");
+    let filename = std_path
+        .file_name()
+        .and_then(|p| p.to_str())
+        .unwrap_or(&key);
+
+    (prefix, filename)
 }
 
 fn format_bytes(bytes: usize) -> String {

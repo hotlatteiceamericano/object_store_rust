@@ -44,7 +44,11 @@ main > http handlers > decide standalone or segement store based on file size > 
 # TODOs
 1. [x] implement standalone store's read
 1. [x] refactor standalone with async
-1. [] implement metadata
-1. [] then implement object's read handler, so that it can locate the object with bucket, prefix and filename
+1. [x] implement Metadata::save
+1. [x] implement Metadata::read
+1. [x] then implement object's read handler, so that it can locate the object with bucket, prefix and filename
+1. [] read again the object_handler::get_object function
+1. [] write tests for Metadata::read
+1. [] write tests for ObjectHandler::get_object
 1. [] refactor object store's save with async
 1. [] 

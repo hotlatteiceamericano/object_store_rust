@@ -24,6 +24,10 @@ impl Metadata {
         }
     }
 
+    pub fn store_type(&self) -> &Option<StoreType> {
+        &self.store_type
+    }
+
     pub fn with_store_type(mut self, store_type: StoreType) -> Self {
         self.store_type = Some(store_type);
         self
@@ -61,5 +65,9 @@ impl Metadata {
 
     fn key(&self) -> String {
         format!("{}/{}/{}", self.bucket, self.prefix, self.filename)
+    }
+
+    fn get_key(bucket: &str, prefix: &str, filename: &str) -> String {
+        format!("{}/{}/{}", bucket, prefix, filename)
     }
 }
