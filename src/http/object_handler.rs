@@ -84,6 +84,7 @@ pub async fn get_object(
         StoreType::Standalone { file_path } => file_path,
     };
 
+    // yet another way to convert Options to Results (anyhow::context)
     let filename = path
         .file_name()
         .and_then(|s| s.to_str())
