@@ -40,11 +40,23 @@ Save to database using sled. Returning Result<>.
 *Static* method to return the metadata given bucket, prefix and filename.
 
 # HTTP Layer
-* HTTP PUT: given object, bucket, prefix and file_name, upload object
-* HTTP GET: given bucket, prefix and file_name, download object
-* HTTP GET: given bucket, optional prefix, return list of file names
+## Save
+HTTP PUT, ask for bucket, prefix, filename and the object binary as arguments.
+
+It first saves the object using a type of store depends on the file size. Store will then return the object location. Object location will be store in the metadata along with bucket, prefix and filename.
+
+## Read
+HTTP GET, ask for bucket, prefix and filename as arguments.
+
+It first finds the metadata by bucket, prefix and filename. Then gets the object location from the metadata. Read the object with that location and return.
+
+## List
+HTTP GET, ask for bucket, an optional prefix as arguments. Return a list of filename.
+
+It finds a list of metadata by the given bucket and prefix. Then return those metadata.
 
 ## Write Path
+(better with a diagram to luustrate)
 main > http handlers > decide standalone or segement store based on file size > object store
 
 # Future Phases
@@ -56,7 +68,8 @@ main > http handlers > decide standalone or segement store based on file size > 
 1. [x] implement Metadata::save
 1. [x] implement Metadata::read
 1. [x] then implement object's read handler, so that it can locate the object with bucket, prefix and filename
-1. [] read again the object_handler::get_object function
+1. [x] read again the object_handler::get_object function => 
+       AI uses Option::context to convert all the Options to Results
 1. [] write tests for Metadata::read
 1. [] write tests for ObjectHandler::get_object
 1. [] refactor object store's save with async
