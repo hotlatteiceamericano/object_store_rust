@@ -37,12 +37,12 @@ pub async fn put_object(
     let store_type = if body.len() <= SMALL_OBJECT_SIZE_THRESHOLD {
         // let storer = SegmentStore::new();
         let store = StandaloneStore::new();
-        store.save(&body)
+        store.save(&body).await
 
         // save the metadata using the result from store.save
     } else {
         let store = StandaloneStore::new();
-        store.save(&body)
+        store.save(&body).await
     }?;
 
     let metadata = Metadata::new(&bucket, &prefix, &filename).with_store_type(store_type);

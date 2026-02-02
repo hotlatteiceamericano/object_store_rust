@@ -13,7 +13,7 @@ impl SegmentStore {
     }
 }
 impl ObjectStore for SegmentStore {
-    fn save(&self, bytes: &Bytes) -> anyhow::Result<crate::common::store_type::StoreType> {
+    async fn save(&self, bytes: &Bytes) -> anyhow::Result<crate::common::store_type::StoreType> {
         println!("saving the object to a segment!");
         Ok(StoreType::Packed {
             segment_file_path: PathBuf::from("./data/segments/1.segment"),

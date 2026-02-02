@@ -44,7 +44,7 @@ impl ObjectStore for StandaloneStore {
             .join("standalone")
     }
 
-    fn save(&self, bytes: &AxumBytes) -> anyhow::Result<StoreType> {
+    async fn save(&self, bytes: &AxumBytes) -> anyhow::Result<StoreType> {
         let path = Self::path();
         if !path.exists() {
             fs::create_dir_all(&path).context("not able to create parent path")?;
@@ -98,6 +98,7 @@ pub mod test {
 
         let store_type = standalone_store
             .save(&axum::body::Bytes::from(bytes.clone()))
+            .await
             .unwrap();
 
         if let StoreType::Standalone { file_path } = store_type {

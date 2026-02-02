@@ -9,5 +9,5 @@
   * next: ask if axum already implement IntoResponse for std::Result
 6. `impl Trait` v.s. `dyn Trait`: short summary, use `impl Trait` in return types; use `dyn Trait` as generic arguments
 7. store layer to only return Box<Stream>. It is handler's responsibility to return axum::IntoResponse but not store layer.
-8. anyhow also supports Option<>
+8. anyhow also supports Option, which convert it to Result
 9. Chainable setter of course!

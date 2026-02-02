@@ -7,9 +7,12 @@ This type of object store handle the object storing for smaller file smaller tha
 
 ## StandaloneStore
 * This type of object store handle larger files. 
-* small file smaller than or equal to 10KB will be packed together with other smaller file in a single segment, until the segment exceed 100KB.
+* Files smaller than or equal to 10KB will be packed together with other smaller file in a single segment, until the segment exceed 100KB.
 * larger files bigger than 10KB will be stored in a standalong file
-* Object get assigned with an UUID
+
+### Open()
+
+### Save()
 
 
 # Metadata Store
@@ -29,6 +32,12 @@ This type of object store handle the object storing for smaller file smaller tha
       * length: u64
     * Standalone:
       * file_path: PathBuf
+
+## Save()
+Save to database using sled. Returning Result<>.
+
+## Read()
+*Static* method to return the metadata given bucket, prefix and filename.
 
 # HTTP Layer
 * HTTP PUT: given object, bucket, prefix and file_name, upload object
