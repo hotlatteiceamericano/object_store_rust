@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::Context;
+use anyhow::{Context, anyhow};
 use axum::{
     body::Bytes,
     extract::{Path as AxumPath, State},
@@ -51,27 +51,31 @@ pub async fn put_object(
     Ok(format!("successfully save metadata: {:?}", metadata))
 }
 
+/// Finds the metadata with bucket, prefix and filename
+/// Locate the object store from metadata
 pub async fn get_object(
     State(state): State<AppState>,
     AxumPath((bucket, key)): AxumPath<(String, String)>,
 ) -> Result<Response, AppError> {
     let (prefix, filename) = get_prefix_filename(&key);
 
+    // this is the "error handler"
     let metadata = Metadata::read(&state.db, &bucket, prefix, filename).context(format!(
         "failed to read metadata with bucket: {}, prefix: {}, filename: {}",
         bucket, prefix, filename
     ))?;
 
-    // todo: read the Option and Result handling methods
-    let metadata = match metadata {
-        Some(m) => m,
-        None => return Ok(StatusCode::NOT_FOUND.into_response()),
+    // this is the "null handler"
+    // also, one way to convert Options to Results (let else)
+    let Some(metadata) = metadata else {
+        return Ok(StatusCode::NOT_FOUND.into_response());
     };
 
+    // another way to convert Options to Results (ok_or_else)
     let store_type = metadata
         .store_type()
         .as_ref()
-        .context("no store type found in metadata")?;
+        .ok_or_else(|| anyhow!("no store type ine metadata"))?;
 
     let path = match store_type {
         StoreType::Packed { .. } => {
