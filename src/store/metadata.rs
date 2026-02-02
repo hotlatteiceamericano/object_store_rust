@@ -4,7 +4,7 @@ use sled::Db;
 
 use crate::common::store_type::StoreType;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Metadata {
     // object_id: Uuid,
     bucket: String,
@@ -14,12 +14,12 @@ pub struct Metadata {
 }
 
 impl Metadata {
-    pub fn new(bucket: &str, prefix: &str, name: &str) -> Self {
+    pub fn new(bucket: &str, prefix: &str, filename: &str) -> Self {
         Self {
             // object_id: Uuid::new_v4(),
             bucket: String::from(bucket),
             prefix: String::from(prefix),
-            filename: String::from(name),
+            filename: String::from(filename),
             store_type: None,
         }
     }
@@ -69,5 +69,40 @@ impl Metadata {
 
     fn get_key(bucket: &str, prefix: &str, filename: &str) -> String {
         format!("{}/{}/{}", bucket, prefix, filename)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use rstest::{fixture, rstest};
+    use sled::Db;
+
+    use crate::store::metadata::Metadata;
+
+    #[fixture]
+    fn db() -> Db {
+        sled::Config::new()
+            .temporary(true)
+            .open()
+            .expect("cannot open a test sled db")
+    }
+
+    #[rstest]
+    fn test_save_read(db: Db) {
+        let bucket = "test_bucket";
+        let prefix = "test_prefix";
+        let filename = "test_filename";
+        let metadata = Metadata::new(bucket, prefix, filename);
+
+        metadata
+            .save(&db)
+            .expect("not able to save the metadata during the test");
+
+        let metadata_read = Metadata::read(&db, bucket, prefix, filename)
+            .expect("not able to read the metadata from test db")
+            .ok_or_else(|| panic!("no metadata in test db"))
+            .unwrap();
+
+        assert_eq!(metadata, metadata_read);
     }
 }
