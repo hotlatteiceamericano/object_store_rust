@@ -14,8 +14,8 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(root_handler::handle()))
-        .route("/object/:bucket/*key", put(object_handler::put_object))
-        .route("/object/:bucket/*key", get(object_handler::get_object))
+        .route("/object/{bucket}/{*key}", put(object_handler::put_object))
+        .route("/object/{bucket}/{*key}", get(object_handler::get_object))
         .with_state(app_state);
 
     let listner = tokio::net::TcpListener::bind("127.0.0.1:3000")

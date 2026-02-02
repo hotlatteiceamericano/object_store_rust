@@ -123,3 +123,66 @@ fn format_bytes(bytes: usize) -> String {
 
     format!("{:.2} {}", value, UNITS[exp])
 }
+
+#[cfg(test)]
+mod test {
+    use axum::{
+        Router,
+        routing::{get, put},
+    };
+    use axum_test::TestServer;
+    use rstest::{fixture, rstest};
+
+    use crate::http::{app_state::AppState, object_handler};
+
+    #[fixture]
+    fn test_server() -> TestServer {
+        let db = sled::Config::new()
+            .temporary(true)
+            .open()
+            .expect("cannot open a temporary db in object_handler::test");
+        let app_state = AppState::new(db);
+        let app = Router::new()
+            .route("/object/{bucket}/{*key}", get(object_handler::get_object))
+            .route("/object/{bucket}/{*key}", put(object_handler::put_object))
+            .with_state(app_state);
+
+        TestServer::new(app).unwrap()
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn test_get_before_put(test_server: TestServer) {
+        let response = test_server
+            .get("/object/test_bucket/test_prefix/test_filename.txt")
+            .await;
+
+        response.assert_status_not_ok();
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn test_put(test_server: TestServer) {
+        let response = test_server
+            .put("/object/test_bucket/test_prefix/test_filename.txt")
+            .await;
+
+        response.assert_status_ok();
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn test_put_get(test_server: TestServer) {
+        let put_response = test_server
+            .put("/object/test_bucket/test_prefix/test_filename.txt")
+            .await;
+
+        put_response.assert_status_ok();
+
+        let read_response = test_server
+            .get("/object/test_bucket/test_prefix/test_filename.txt")
+            .await;
+
+        read_response.assert_status_ok();
+    }
+}
