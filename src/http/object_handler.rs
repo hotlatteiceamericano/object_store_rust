@@ -17,7 +17,7 @@ use object_store_rust::{
 
 use crate::http::app_state::AppState;
 
-pub const SMALL_OBJECT_SIZE_THRESHOLD: usize = 30 * 1024 * 1024;
+pub const SMALL_OBJECT_SIZE_THRESHOLD: usize = 30 * 1024;
 
 pub async fn put_object(
     State(state): State<AppState>,
@@ -39,7 +39,7 @@ pub async fn put_object(
         let mut segment_store = SegmentStore::new()?;
         segment_store.save(&body).await
 
-        // save the metadata using the result from store.save
+        // todo: save the metadata using the result from store.save
     } else {
         // StandaloneState's instantiate is cheap, can be constructed during the request handlings
         let mut store = StandaloneStore::new();
@@ -128,8 +128,11 @@ fn format_bytes(bytes: usize) -> String {
 
 #[cfg(test)]
 mod test {
+    use std::fs;
+
     use axum::{
         Router,
+        body::Bytes,
         routing::{get, put},
     };
     use axum_test::TestServer;
@@ -152,6 +155,12 @@ mod test {
         TestServer::new(app).unwrap()
     }
 
+    #[fixture]
+    fn image() -> axum::body::Bytes {
+        let image = fs::read("test/test-image.jpeg").unwrap();
+        Bytes::from(image)
+    }
+
     #[rstest]
     #[tokio::test]
     async fn test_get_before_put(test_server: TestServer) {
@@ -164,9 +173,10 @@ mod test {
 
     #[rstest]
     #[tokio::test]
-    async fn test_put(test_server: TestServer) {
+    async fn test_standalone_put(test_server: TestServer, image: Bytes) {
         let response = test_server
             .put("/object/test_bucket/test_prefix/test_filename.txt")
+            .bytes(image)
             .await;
 
         response.assert_status_ok();
@@ -174,9 +184,10 @@ mod test {
 
     #[rstest]
     #[tokio::test]
-    async fn test_put_get(test_server: TestServer) {
+    async fn test_standalone_put_get(test_server: TestServer, image: Bytes) {
         let put_response = test_server
             .put("/object/test_bucket/test_prefix/test_filename.txt")
+            .bytes(image)
             .await;
 
         put_response.assert_status_ok();

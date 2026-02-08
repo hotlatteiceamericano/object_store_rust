@@ -76,7 +76,8 @@ It finds a list of metadata by the given bucket and prefix. Then return those me
 main > http handlers > decide standalone or segement store based on file size > object store
 
 # Future Phases
-* Support range read.
+* Support range read
+* Support versioning
 
 # TODOs
 1. [x] implement standalone store's read
