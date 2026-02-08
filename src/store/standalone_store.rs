@@ -44,7 +44,7 @@ impl ObjectStore for StandaloneStore {
             .join("standalone")
     }
 
-    async fn save(&self, bytes: &AxumBytes) -> anyhow::Result<StoreType> {
+    async fn save(&mut self, bytes: &AxumBytes) -> anyhow::Result<StoreType> {
         let path = Self::path();
         if !path.exists() {
             fs::create_dir_all(&path).context("not able to create parent path")?;
@@ -86,7 +86,7 @@ pub mod test {
     #[rstest]
     #[tokio::test]
     async fn test_save_and_open() {
-        let standalone_store = StandaloneStore::new();
+        let mut standalone_store = StandaloneStore::new();
         let bytes = fs::read(
             std::env::current_dir()
                 .unwrap()

@@ -9,7 +9,7 @@ pub trait ObjectStore {
     const STORE_EXTENSION: &'static str = "store";
 
     fn path() -> PathBuf;
-    async fn save(&self, bytes: &Bytes) -> anyhow::Result<StoreType>;
+    async fn save(&mut self, bytes: &Bytes) -> anyhow::Result<StoreType>;
 
     // I think the outer Result wrap is confusing but still needed
     // outer Result meant for other errors like file opening
