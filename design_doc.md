@@ -4,6 +4,16 @@ S3-Like Object Store
 ## SegmentStore
 This type of object store handle the object storing for smaller file smaller than 30KB. As we are storing the files using files and each file has its own inode for its metadata, storing smaller files in individual files will consume too much of disk spaces. Hence they are stored together within the same file until the file size reaches the to-be-decided threshold.
 
+SegmentStore also in responsible for segment's rotation and manage the active segment file, that the segment is not full yet. In order for the segment file to be locked and shared between different requests/handlers, `Arc<Mutex>>` will be applied to SegmentStore.
+
+Having Arc<> inside the SegmentStore is how sled::Db does is because, the sled::Db is a public library meant to be shared. For something only being used locally within a project, it is not necessarily to hide this implementation too deep. As a result, we will wrap SegmentStore with Arc<> during the state.
+
+
+To scale further, two mechanics can be implemented to remove the locking bottleneck.
+
+The first one would be sharding to many different servers. Only if two requests routed to the same shard will be locked.
+
+The second one would be *buffering* the write request in RAM. And flush the write request to hard disk when necessary.
 
 ## StandaloneStore
 * This type of object store handle larger files. 
