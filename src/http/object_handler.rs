@@ -11,7 +11,7 @@ use object_store_rust::{
     common::store_type::StoreType,
     store::{
         app_error::AppError, metadata::Metadata, object_store::ObjectStore,
-        standalone_store::StandaloneStore,
+        segment_store::SegmentStore, standalone_store::StandaloneStore,
     },
 };
 
@@ -35,13 +35,14 @@ pub async fn put_object(
     );
 
     let store_type = if body.len() <= SMALL_OBJECT_SIZE_THRESHOLD {
-        // let storer = SegmentStore::new();
-        let store = StandaloneStore::new();
-        store.save(&body).await
+        // SegmentStore is shared in the state, unlike StandaloneStore
+        let mut segment_store = SegmentStore::new()?;
+        segment_store.save(&body).await
 
         // save the metadata using the result from store.save
     } else {
-        let store = StandaloneStore::new();
+        // StandaloneState's instantiate is cheap, can be constructed during the request handlings
+        let mut store = StandaloneStore::new();
         store.save(&body).await
     }?;
 
@@ -77,6 +78,7 @@ pub async fn get_object(
         .as_ref()
         .ok_or_else(|| anyhow!("no store type ine metadata"))?;
 
+    // todo: return stream based on different store_path
     let path = match store_type {
         StoreType::Packed { .. } => {
             return Err(anyhow::anyhow!("packed storage type not supported yet").into());
