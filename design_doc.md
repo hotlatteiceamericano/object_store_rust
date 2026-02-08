@@ -4,6 +4,11 @@ S3-Like Object Store
 ## SegmentStore
 This type of object store handle the object storing for smaller file smaller than 30KB. As we are storing the files using files and each file has its own inode for its metadata, storing smaller files in individual files will consume too much of disk spaces. Hence they are stored together within the same file until the file size reaches the to-be-decided threshold.
 
+### save()
+It finds an active segment and append the binary to this active segment.
+
+In order for SegmentStore to improve save/write performance, SegmentStore will search for an active segment under the data/segment path and store in it as a field. As oppose to what StandlaoneStore does which will be discussed shortly.
+
 SegmentStore also in responsible for segment's rotation and manage the active segment file, that the segment is not full yet. In order for the segment file to be locked and shared between different requests/handlers, `Arc<Mutex>>` will be applied to SegmentStore.
 
 Having Arc<> inside the SegmentStore is how sled::Db does is because, the sled::Db is a public library meant to be shared. For something only being used locally within a project, it is not necessarily to hide this implementation too deep. As a result, we will wrap SegmentStore with Arc<> during the state.
@@ -20,9 +25,10 @@ The second one would be *buffering* the write request in RAM. And flush the writ
 * Files smaller than or equal to 10KB will be packed together with other smaller file in a single segment, until the segment exceed 100KB.
 * larger files bigger than 10KB will be stored in a standalong file
 
-### Open()
+### open()
 
-### Save()
+### save()
+It creates a new file with a incremental number as the standalone filename and store the binary in it. As oppose to SegmentStore who needs to store an active segment in it as a field, StandaloneStore is a state-less struct which perform on-and-off action. And the axum handler spawn a new StandaloneStore instance in every save request.
 
 
 # Metadata Store
