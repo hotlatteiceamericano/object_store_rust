@@ -11,7 +11,6 @@ pub enum StoreType {
     Packed {
         segment_file_path: PathBuf,
         offset: u64,
-        length: u64,
     },
     Standalone {
         file_path: PathBuf,

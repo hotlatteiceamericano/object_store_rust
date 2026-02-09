@@ -9,6 +9,10 @@ use crate::{
     store::{blob::Blob, object_store::ObjectStore},
 };
 
+/// Store object in segments
+/// It finds and store an active segment in it as a field
+/// store object in it until the active segment is full
+/// then rotate to a new segment
 pub struct SegmentStore {
     active_segment: Segment<Blob>,
 }
@@ -40,7 +44,8 @@ impl SegmentStore {
     }
 
     fn rotate_segment(&mut self) -> anyhow::Result<()> {
-        todo!()
+        self.active_segment = Segment::new(&Self::path(), 0)?;
+        Ok(())
     }
 }
 
@@ -49,7 +54,10 @@ impl ObjectStore for SegmentStore {
         &mut self,
         bytes: &Bytes,
     ) -> anyhow::Result<crate::common::store_type::StoreType> {
+        let curr_offset = self.active_segment.write_position();
+        let curr_path = self.active_segment.path().to_owned();
         let blob = Blob::new(bytes.to_vec());
+
         self.active_segment
             .write(&blob)
             .context("failed to write blob using SegmentStore")?;
@@ -59,9 +67,8 @@ impl ObjectStore for SegmentStore {
         }
 
         Ok(StoreType::Packed {
-            segment_file_path: PathBuf::from("./data/segments/1.segment"),
-            offset: 0,
-            length: 0,
+            segment_file_path: curr_path,
+            offset: curr_offset,
         })
     }
 
