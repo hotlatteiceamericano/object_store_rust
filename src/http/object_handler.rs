@@ -86,13 +86,7 @@ pub async fn get_object(
         StoreType::Standalone { file_path } => file_path,
     };
 
-    // yet another way to convert Options to Results (anyhow::context)
-    let filename = path
-        .file_name()
-        .and_then(|s| s.to_str())
-        .context("invalid filename in store path")?;
-
-    let stream = StandaloneStore::open(filename)
+    let stream = StandaloneStore::open(path.to_path_buf())
         .await
         .context("failed to open object file")?;
 
@@ -184,7 +178,7 @@ mod test {
 
     #[rstest]
     #[tokio::test]
-    async fn test_standalone_put_get(test_server: TestServer, image: Bytes) {
+    async fn test_standaloneput_get(test_server: TestServer, image: Bytes) {
         let put_response = test_server
             .put("/object/test_bucket/test_prefix/test_filename.txt")
             .bytes(image)

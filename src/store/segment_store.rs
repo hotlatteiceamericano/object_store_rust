@@ -43,6 +43,14 @@ impl SegmentStore {
         }
     }
 
+    async fn open(
+        // todo: argument to take segment file path, offset and length
+        file_name: &str,
+    ) -> anyhow::Result<futures::stream::BoxStream<'static, Result<Bytes, futures::io::Error>>>
+    {
+        todo!()
+    }
+
     fn rotate_segment(&mut self) -> anyhow::Result<()> {
         self.active_segment = Segment::new(&Self::path(), 0)?;
         Ok(())
@@ -77,13 +85,5 @@ impl ObjectStore for SegmentStore {
             .unwrap()
             .join("store")
             .join("segment")
-    }
-
-    async fn open(
-        // todo: argument to take segment file path, offset and length
-        file_name: &str,
-    ) -> anyhow::Result<futures::stream::BoxStream<'static, Result<Bytes, futures::io::Error>>>
-    {
-        todo!()
     }
 }

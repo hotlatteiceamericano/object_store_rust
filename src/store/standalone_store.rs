@@ -34,6 +34,16 @@ impl StandaloneStore {
 
         Ok(format!("{}.{}", next_file_number, Self::STORE_EXTENSION))
     }
+
+    pub async fn open(
+        path: PathBuf,
+    ) -> anyhow::Result<futures::stream::BoxStream<'static, Result<AxumBytes, futures::io::Error>>>
+    {
+        let file = File::open(path).await?;
+        let stream = ReaderStream::new(file);
+
+        Ok(stream.boxed())
+    }
 }
 
 impl ObjectStore for StandaloneStore {
@@ -58,17 +68,6 @@ impl ObjectStore for StandaloneStore {
         Ok(StoreType::Standalone {
             file_path: next_file_path,
         })
-    }
-
-    async fn open(
-        file_name: &str,
-    ) -> anyhow::Result<futures::stream::BoxStream<'static, Result<AxumBytes, futures::io::Error>>>
-    {
-        let path = Self::path().join(file_name);
-        let file = File::open(path).await?;
-        let stream = ReaderStream::new(file);
-
-        Ok(stream.boxed())
     }
 }
 
@@ -103,10 +102,7 @@ pub mod test {
 
         if let StoreType::Standalone { file_path } = store_type {
             assert!(file_path.file_name().is_some());
-            let file_name = file_path.file_name().unwrap();
-            let mut stream = StandaloneStore::open(file_name.to_str().unwrap())
-                .await
-                .unwrap();
+            let mut stream = StandaloneStore::open(file_path).await.unwrap();
 
             let mut binary = Vec::new();
             while let Some(chunk) = stream.next().await {
