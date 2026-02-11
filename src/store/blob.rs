@@ -13,11 +13,13 @@ impl Blob {
 }
 
 impl Storable for Blob {
+    // how can I prevent this bug?
+    // Segment::write calculate the length of serializeed instance
     fn content_length(&self) -> u32 {
-        todo!()
+        bincode::serialize(&self).unwrap().len() as u32
     }
 
     fn total_length(&self) -> u32 {
-        todo!()
+        self.content_length() + 4
     }
 }
