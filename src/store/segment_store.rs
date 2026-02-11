@@ -1,7 +1,8 @@
 use std::{fs, path::PathBuf};
 
-use anyhow::{Context, Ok, Result};
+use anyhow::{Context, Result};
 use axum::body::Bytes;
+use futures::{StreamExt, stream};
 use segment_rust::segment::{self, Segment};
 
 use crate::{
@@ -24,10 +25,13 @@ impl SegmentStore {
         Ok(Self { active_segment })
     }
 
-    /// Find the segment under data/segment/ which is not full yet
+    /// Find the segment under store/segment/ which is not full yet
     /// If there are no segment found, will create a new one
     fn find_active_segment() -> anyhow::Result<Segment<Blob>> {
         let path = Self::path();
+        if !path.exists() {
+            fs::create_dir_all(&path).expect("cannot create parent directory for SegmentStore");
+        }
 
         let segment: Option<Segment<Blob>> = fs::read_dir(&path)
             .context("cannot read directory")?
@@ -43,12 +47,16 @@ impl SegmentStore {
         }
     }
 
-    async fn open(
-        // todo: argument to take segment file path, offset and length
-        file_name: &str,
+    pub async fn open(
+        file_path: PathBuf,
+        offset: u64,
     ) -> anyhow::Result<futures::stream::BoxStream<'static, Result<Bytes, futures::io::Error>>>
     {
-        todo!()
+        let mut segment = Segment::<Blob>::from(file_path);
+        let blob = segment.read(offset)?;
+        let stream_of_bytes = stream::once(async { Ok(Bytes::from(blob.binary)) });
+
+        Ok(stream_of_bytes.boxed())
     }
 
     fn rotate_segment(&mut self) -> anyhow::Result<()> {
@@ -85,5 +93,69 @@ impl ObjectStore for SegmentStore {
             .unwrap()
             .join("store")
             .join("segment")
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::fs;
+
+    use axum::body::Bytes;
+    use futures::StreamExt;
+    use rstest::rstest;
+    use segment_rust::segment::Segment;
+
+    use crate::{
+        common::store_type::StoreType,
+        store::{blob::Blob, object_store::ObjectStore, segment_store::SegmentStore},
+    };
+
+    #[rstest]
+    #[tokio::test]
+    async fn test_when_no_existing_segments() {
+        let mut segment_store = SegmentStore::new().unwrap();
+        let text_file_bytes = fs::read(
+            std::env::current_dir()
+                .unwrap()
+                .join("test")
+                .join("test.txt"),
+        )
+        .unwrap();
+
+        let store_type = segment_store
+            .save(&Bytes::from(text_file_bytes.clone()))
+            .await
+            .unwrap();
+
+        let StoreType::Packed {
+            segment_file_path,
+            offset,
+        } = store_type
+        else {
+            panic!("SegmentStore returns a standalone store type");
+        };
+
+        let mut stream = SegmentStore::open(segment_file_path, offset)
+            .await
+            .expect("SegmentStore cannot open stream");
+        let mut binary_read = Vec::<u8>::new();
+        while let Some(chunk) = stream.next().await {
+            binary_read.extend_from_slice(&chunk.unwrap());
+        }
+
+        assert_eq!(
+            binary_read, text_file_bytes,
+            "binary read from the segment store is different",
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn test_with_existing_segments() {
+        todo!();
+    }
+
+    fn init() {
+        let path = SegmentStore::path();
     }
 }
