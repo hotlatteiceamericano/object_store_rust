@@ -19,7 +19,7 @@ pub struct SegmentStore {
 }
 
 impl SegmentStore {
-    const MAX_LENGTH: u64 = 10 * 1024 * 1042;
+    const MAX_LENGTH: u64 = 2 * 1024;
     pub fn new() -> Result<Self> {
         let active_segment = Self::find_active_segment().context("cannot find active segment")?;
         Ok(Self { active_segment })
@@ -79,7 +79,9 @@ impl ObjectStore for SegmentStore {
             .context("failed to write blob using SegmentStore")?;
 
         if self.active_segment.write_position() > Self::MAX_LENGTH {
-            self.rotate_segment()?;
+            println!("rotating to a new segment");
+            self.rotate_segment()
+                .context("failed to ratote to new segments")?;
         }
 
         Ok(StoreType::Packed {

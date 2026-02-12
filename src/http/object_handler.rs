@@ -76,19 +76,19 @@ pub async fn get_object(
     let store_type = metadata
         .store_type()
         .as_ref()
-        .ok_or_else(|| anyhow!("no store type ine metadata"))?;
+        .ok_or_else(|| anyhow!("no store type in metadata"))?;
 
-    // todo: return stream based on different store_path
-    let path = match store_type {
-        StoreType::Packed { .. } => {
-            return Err(anyhow::anyhow!("packed storage type not supported yet").into());
-        }
-        StoreType::Standalone { file_path } => file_path,
+    let stream = match store_type {
+        StoreType::Packed {
+            segment_file_path,
+            offset,
+        } => SegmentStore::open(segment_file_path, *offset)
+            .await
+            .context("SegmentStore cannot open the file")?,
+        StoreType::Standalone { file_path } => StandaloneStore::open(file_path)
+            .await
+            .context("StandaloneStore cannot open the file")?,
     };
-
-    let stream = StandaloneStore::open(path.to_path_buf())
-        .await
-        .context("failed to open object file")?;
 
     Ok(axum::body::Body::from_stream(stream).into_response())
 }
@@ -155,9 +155,15 @@ mod test {
         Bytes::from(image)
     }
 
+    #[fixture]
+    fn text() -> axum::body::Bytes {
+        let text = fs::read("test/test.txt").unwrap();
+        Bytes::from(text)
+    }
+
     #[rstest]
     #[tokio::test]
-    async fn test_get_before_put(test_server: TestServer) {
+    async fn test_standalone_get_before_put(test_server: TestServer) {
         let response = test_server
             .get("/object/test_bucket/test_prefix/test_filename.txt")
             .await;
@@ -178,18 +184,33 @@ mod test {
 
     #[rstest]
     #[tokio::test]
-    async fn test_standaloneput_get(test_server: TestServer, image: Bytes) {
+    async fn test_standalone_put_get(test_server: TestServer, image: Bytes) {
         let put_response = test_server
             .put("/object/test_bucket/test_prefix/test_filename.txt")
             .bytes(image)
             .await;
 
         put_response.assert_status_ok();
+        // todo: assert returned metadata
 
         let read_response = test_server
             .get("/object/test_bucket/test_prefix/test_filename.txt")
             .await;
 
         read_response.assert_status_ok();
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn test_segment_put_get(test_server: TestServer, text: Bytes) {
+        let url = "/object/test_bucket/test_prefix/test_text.txt";
+        let put_response = test_server.put(url).bytes(text).await;
+
+        put_response.assert_status_ok();
+
+        let get_response = test_server.get(url).await;
+        // todo: assert returned metadata
+
+        get_response.assert_status_ok();
     }
 }
