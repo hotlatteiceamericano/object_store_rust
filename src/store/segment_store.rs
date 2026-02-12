@@ -38,7 +38,7 @@ impl SegmentStore {
             .filter_map(|r| r.ok())
             .map(|entry| entry.path())
             .filter(|p| p.extension().unwrap() == segment::FILE_EXTENSION)
-            .map(|p| Segment::from(p))
+            .map(|p| Segment::from(&p))
             .find(|s| s.write_position() < Self::MAX_LENGTH);
 
         match segment {
@@ -48,7 +48,7 @@ impl SegmentStore {
     }
 
     pub async fn open(
-        file_path: PathBuf,
+        file_path: &PathBuf,
         offset: u64,
     ) -> anyhow::Result<futures::stream::BoxStream<'static, Result<Bytes, futures::io::Error>>>
     {
@@ -103,16 +103,15 @@ mod test {
     use axum::body::Bytes;
     use futures::StreamExt;
     use rstest::rstest;
-    use segment_rust::segment::Segment;
 
     use crate::{
         common::store_type::StoreType,
-        store::{blob::Blob, object_store::ObjectStore, segment_store::SegmentStore},
+        store::{object_store::ObjectStore, segment_store::SegmentStore},
     };
 
     #[rstest]
     #[tokio::test]
-    async fn test_when_no_existing_segments() {
+    async fn test_save_open() {
         let mut segment_store = SegmentStore::new().unwrap();
         let text_file_bytes = fs::read(
             std::env::current_dir()
@@ -135,7 +134,7 @@ mod test {
             panic!("SegmentStore returns a standalone store type");
         };
 
-        let mut stream = SegmentStore::open(segment_file_path, offset)
+        let mut stream = SegmentStore::open(&segment_file_path, offset)
             .await
             .expect("SegmentStore cannot open stream");
         let mut binary_read = Vec::<u8>::new();
@@ -147,12 +146,6 @@ mod test {
             binary_read, text_file_bytes,
             "binary read from the segment store is different",
         );
-    }
-
-    #[rstest]
-    #[tokio::test]
-    async fn test_with_existing_segments() {
-        todo!();
     }
 
     fn init() {

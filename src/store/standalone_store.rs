@@ -36,7 +36,7 @@ impl StandaloneStore {
     }
 
     pub async fn open(
-        path: PathBuf,
+        path: &PathBuf,
     ) -> anyhow::Result<futures::stream::BoxStream<'static, Result<AxumBytes, futures::io::Error>>>
     {
         let file = File::open(path).await?;
@@ -102,7 +102,7 @@ pub mod test {
 
         if let StoreType::Standalone { file_path } = store_type {
             assert!(file_path.file_name().is_some());
-            let mut stream = StandaloneStore::open(file_path).await.unwrap();
+            let mut stream = StandaloneStore::open(&file_path).await.unwrap();
 
             let mut binary = Vec::new();
             while let Some(chunk) = stream.next().await {
