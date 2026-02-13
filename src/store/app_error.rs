@@ -8,9 +8,10 @@ pub struct AppError {
 // AppError -> IntoResponse
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
+        tracing::error!("{:#}", self.error);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("something went wrong: {}", self.error),
+            format!("something went wrong: {:#}", self.error),
         )
             .into_response()
     }

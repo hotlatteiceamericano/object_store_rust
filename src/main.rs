@@ -9,6 +9,7 @@ pub mod http;
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt::init();
     let db = sled::open("my_db").expect("not able to open my_db");
     let app_state = AppState::new(db);
 
