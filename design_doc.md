@@ -2,33 +2,30 @@ S3-Like Object Store
 
 # Object Store
 ## SegmentStore
-This type of object store handle the object storing for smaller file smaller than 30KB. As we are storing the files using files and each file has its own inode for its metadata, storing smaller files in individual files will consume too much of disk spaces. Hence they are stored together within the same file until the file size reaches the to-be-decided threshold.
+It stores objects smaller than 30KB. Each physical files has its overhead and it is wasteful to create new file for the storing of small objects. Hence they are stored together within the same file called Segments, until the size of segment reaches a defined threshold.
+
+Since SegmentStore stores the active segment in it as a field, the instantiation is more expensive than the other type of store - StandaloneStore. Hence SegmentStore is instantiated once during the app starting and being save in the axum state.
+
+The segment component is coming from [rust_segment](https://github.com/hotlatteiceamericano/segment_rust) crate. It create a new Blob struct which implements the Storable trait required by the rust_segment crate and store binary in the BLob struct.
 
 ### save()
-It finds an active segment and append the binary to this active segment.
+It finds an active segment whose size is smaller than the defined threshold, and append the binary to this active segment.
+When a segment is full, it rotates to a new segment.
 
-In order for SegmentStore to improve save/write performance, SegmentStore will search for an active segment under the data/segment path and store in it as a field. As oppose to what StandlaoneStore does which will be discussed shortly.
-
-SegmentStore also in responsible for segment's rotation and manage the active segment file, that the segment is not full yet. In order for the segment file to be locked and shared between different requests/handlers, `Arc<Mutex>>` will be applied to SegmentStore.
-
-Having Arc<> inside the SegmentStore is how sled::Db does is because, the sled::Db is a public library meant to be shared. For something only being used locally within a project, it is not necessarily to hide this implementation too deep. As a result, we will wrap SegmentStore with Arc<> during the state.
-
-
-To scale further, two mechanics can be implemented to remove the locking bottleneck.
-
-The first one would be sharding to many different servers. Only if two requests routed to the same shard will be locked.
-
-The second one would be *buffering* the write request in RAM. And flush the write request to hard disk when necessary.
-
-## StandaloneStore
-* This type of object store handle larger files. 
-* Files smaller than or equal to 10KB will be packed together with other smaller file in a single segment, until the segment exceed 100KB.
-* larger files bigger than 10KB will be stored in a standalong file
+It returns the metadata for this object.
 
 ### open()
+As the active segment is found during the initialization, it can call the active segment's read method directly to read the object.
+
+## StandaloneStore
+As opposed to SegmentStore, it stores larger objects in standalone file. As the object becomes larger, metadata for physical files become less wasteful compared to smaller objects.
+
+It returns the metadata for this object.
 
 ### save()
-It creates a new file with a incremental number as the standalone filename and store the binary in it. As oppose to SegmentStore who needs to store an active segment in it as a field, StandaloneStore is a state-less struct which perform on-and-off action. And the axum handler spawn a new StandaloneStore instance in every save request.
+As oppose to SegmentStore who needs to store an active segment in it as a field, StandaloneStore is a state-less struct which perform on-and-off action. Hence axum handler instantiate a new StandaloneStore instance in every save request.
+
+### open()
 
 
 # Metadata Store
@@ -57,14 +54,14 @@ Save to database using sled. Returning Result<>.
 
 # HTTP Layer
 ## Save
-HTTP PUT, ask for bucket, prefix, filename and the object binary as arguments.
+Iimplemented with HTTP PUT method. It asks for for bucket, prefix, filename and the object binary as arguments.
 
-It first saves the object using a type of store depends on the file size. Store will then return the object location. Object location will be store in the metadata along with bucket, prefix and filename.
+Depends on the object size, it uses different types of object store to store the object.
 
 ## Read
-HTTP GET, ask for bucket, prefix and filename as arguments.
+Implemented with HTTP GET method. It asks for bucket, prefix and filenames to find the metadata of an object.
 
-It first finds the metadata by bucket, prefix and filename. Then gets the object location from the metadata. Read the object with that location and return.
+It then finds the object store from the metadata, and call the matching object store, SegmentStore or StandaloneStore, to fetch the object.
 
 ## List
 HTTP GET, ask for bucket, an optional prefix as arguments. Return a list of filename.
@@ -78,6 +75,10 @@ main > http handlers > decide standalone or segement store based on file size > 
 # Future Phases
 * Support range read
 * Support versioning
+* Scale:
+  * The first one would be sharding to many different servers. Only if two requests routed to the same shard will be locked.
+  * The second one would be *buffering* the write request in RAM. And flush the write request to hard disk when necessary.
+
 
 # TODOs
 1. [x] implement standalone store's read
