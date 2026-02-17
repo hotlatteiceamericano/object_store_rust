@@ -162,11 +162,22 @@ mod test {
         );
     }
 
-    #[rstest]
-    #[tokio::test]
-    async fn test_segment_rotation_multiple_times() {
-        todo!(
-            "test the rotation by save() enough times using the test.txt for it to rotate two times"
-        );
-    }
+    // before refactoring the segment store to take different parent path
+    // by removing the path() from object_store,
+    // and provide path as SegmentStore's new argument
+    // this test will impact the data store
+    // #[rstest]
+    // #[tokio::test]
+    // async fn test_segment_rotation_multiple_times(
+    //     mut segment_store: SegmentStore,
+    //     text_binary: Vec<u8>,
+    // ) {
+    //     for _ in 0..44 {
+    //         segment_store
+    //             .save(&Bytes::from(text_binary.clone()))
+    //             .await
+    //             .unwrap();
+    //     }
+    //     assert_eq!(segment_store.active_segment.base_offset(), 2068);
+    // }
 }
