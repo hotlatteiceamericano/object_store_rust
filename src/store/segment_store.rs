@@ -61,8 +61,9 @@ impl SegmentStore {
         Ok(stream_of_bytes.boxed())
     }
 
-    fn rotate_segment(&mut self) -> anyhow::Result<()> {
-        self.active_segment = Segment::new(&Self::path(), 0)?;
+    fn rotate_segment(&mut self, new_base_offset: u64) -> anyhow::Result<()> {
+        self.active_segment = Segment::new(&Self::path(), new_base_offset)
+            .context("failed to create a new segment during rotation")?;
         Ok(())
     }
 }
@@ -82,8 +83,10 @@ impl ObjectStore for SegmentStore {
 
         if self.active_segment.write_position() > Self::MAX_LENGTH {
             println!("rotating to a new segment");
-            self.rotate_segment()
-                .context("failed to ratote to new segments")?;
+            self.rotate_segment(
+                self.active_segment.base_offset() + self.active_segment.write_position(),
+            )
+            .context("failed to rotate to a new segment")?;
         }
 
         Ok(StoreType::Packed {
@@ -106,27 +109,34 @@ mod test {
 
     use axum::body::Bytes;
     use futures::StreamExt;
-    use rstest::rstest;
+    use rstest::{fixture, rstest};
 
     use crate::{
         common::store_type::StoreType,
         store::{object_store::ObjectStore, segment_store::SegmentStore},
     };
 
-    #[rstest]
-    #[tokio::test]
-    async fn test_save_open() {
-        let mut segment_store = SegmentStore::new().unwrap();
-        let text_file_bytes = fs::read(
+    #[fixture]
+    fn segment_store() -> SegmentStore {
+        SegmentStore::new().unwrap()
+    }
+
+    #[fixture]
+    fn text_binary() -> Vec<u8> {
+        fs::read(
             std::env::current_dir()
                 .unwrap()
                 .join("test")
                 .join("test.txt"),
         )
-        .unwrap();
+        .unwrap()
+    }
 
+    #[rstest]
+    #[tokio::test]
+    async fn test_save_open(mut segment_store: SegmentStore, text_binary: Vec<u8>) {
         let store_type = segment_store
-            .save(&Bytes::from(text_file_bytes.clone()))
+            .save(&Bytes::from(text_binary.clone()))
             .await
             .unwrap();
 
@@ -147,12 +157,16 @@ mod test {
         }
 
         assert_eq!(
-            binary_read, text_file_bytes,
-            "binary read from the segment store is different",
+            binary_read, text_binary,
+            "binary read from the segment store is different than the original binary",
         );
     }
 
-    fn init() {
-        let path = SegmentStore::path();
+    #[rstest]
+    #[tokio::test]
+    async fn test_segment_rotation_multiple_times() {
+        todo!(
+            "test the rotation by save() enough times using the test.txt for it to rotate two times"
+        );
     }
 }
