@@ -19,7 +19,7 @@ pub struct SegmentStore {
 }
 
 impl SegmentStore {
-    const MAX_LENGTH: u64 = 2 * 1024;
+    const MAX_LENGTH: u64 = 1 * 1024;
     pub fn new() -> Result<Self> {
         let active_segment = Self::find_active_segment().context("cannot find active segment")?;
         Ok(Self { active_segment })
@@ -33,17 +33,19 @@ impl SegmentStore {
             fs::create_dir_all(&path).expect("cannot create parent directory for SegmentStore");
         }
 
-        let segment: Option<Segment<Blob>> = fs::read_dir(&path)
+        let biggest_segment: Option<Segment<Blob>> = fs::read_dir(&path)
             .context("cannot read directory")?
             .filter_map(|r| r.ok())
             .map(|entry| entry.path())
             .filter(|p| p.extension().unwrap() == segment::FILE_EXTENSION)
             .map(|p| Segment::from(&p))
-            .find(|s| s.write_position() < Self::MAX_LENGTH);
+            .max_by(|a, b| a.base_offset().cmp(&b.base_offset()));
 
-        match segment {
-            Some(s) => return Ok(s),
-            None => return Segment::new(&path, 0),
+        match biggest_segment {
+            Some(b) if b.write_position() < Self::MAX_LENGTH => Ok(b),
+            Some(b) => Segment::new(&path, b.write_position())
+                .context("cannot create a new bigger segment"),
+            None => Segment::new(&path, 0),
         }
     }
 
