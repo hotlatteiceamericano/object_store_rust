@@ -26,22 +26,10 @@ pub async fn put_object(
 ) -> Result<impl IntoResponse, AppError> {
     let (prefix, filename) = get_prefix_filename(&key);
 
-    println!(
-        "received PUT request, bucket: {} prefixe: {}, file name: {}, object size: {}",
-        bucket,
-        prefix,
-        filename,
-        body.len()
-    );
-
     let store_type = if body.len() <= SMALL_OBJECT_SIZE_THRESHOLD {
-        // SegmentStore is shared in the state, unlike StandaloneStore
         let mut segment_store = SegmentStore::new()?;
         segment_store.save(&body).await
-
-        // todo: save the metadata using the result from store.save
     } else {
-        // StandaloneState's instantiate is cheap, can be constructed during the request handlings
         let mut store = StandaloneStore::new();
         store.save(&body).await
     }?;
