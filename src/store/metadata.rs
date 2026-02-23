@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use sled::Db;
@@ -26,6 +28,10 @@ impl Metadata {
 
     pub fn store_type(&self) -> &Option<StoreType> {
         &self.store_type
+    }
+
+    pub fn filename(&self) -> &str {
+        &self.filename
     }
 
     pub fn with_store_type(mut self, store_type: StoreType) -> Self {
@@ -61,6 +67,33 @@ impl Metadata {
                     .context("failed to deserialize sled binaries into Metadata instance")
             })
             .transpose()
+    }
+
+    pub fn list(
+        db: &Db,
+        bucket: &str,
+        prefix: Option<&str>,
+        filename: Option<&str>,
+    ) -> anyhow::Result<Vec<Metadata>> {
+        let mut key = bucket.to_string();
+        if prefix.is_some() {
+            key = format!("{}/{}", key, &prefix.unwrap());
+        }
+        if filename.is_some() {
+            key = format!("{}/{}", key, filename.unwrap());
+        }
+
+        let mut metadata = Vec::new();
+        for result in db.scan_prefix(key) {
+            let binary = result
+                .context("cannot read the value of this sled entry")?
+                .1;
+            let instance = bincode::deserialize::<Metadata>(&binary)
+                .context("cannot deserialize binary to Metadata instance")?;
+            metadata.push(instance);
+        }
+
+        Ok(metadata)
     }
 
     fn key(&self) -> String {
@@ -104,5 +137,30 @@ mod test {
             .unwrap();
 
         assert_eq!(metadata, metadata_read);
+    }
+
+    #[rstest]
+    fn test_list(db: Db) {
+        let first_metadata = Metadata::new("first_bucket", "first_prefix", "first_filename");
+        let second_metadata = Metadata::new("second_bucket", "second_prefix", "second_filename");
+        let third_metadata = Metadata::new("second_bucket", "third_prefix", "third_filename");
+
+        first_metadata
+            .save(&db)
+            .expect("not able to save the first metadata in the unit test");
+        second_metadata
+            .save(&db)
+            .expect("not able to save the second metadata in the unit test");
+        third_metadata
+            .save(&db)
+            .expect("not able to save the second metadata in the unit test");
+
+        let list_of_first_metadata = Metadata::list(&db, "first_bucket", None, None)
+            .expect("not able to read the metadata from test db");
+        assert_eq!(1, list_of_first_metadata.len());
+
+        let list_of_second_metadata = Metadata::list(&db, "second_bucket", None, None)
+            .expect("not able to list the metadata from test db");
+        assert_eq!(2, list_of_second_metadata.len());
     }
 }
