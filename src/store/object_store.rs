@@ -1,9 +1,7 @@
-use std::{path::PathBuf, pin::Pin};
-
-use axum::body::Bytes;
-use futures::{Stream, io};
+use std::path::PathBuf;
 
 use crate::common::store_type::StoreType;
+use axum::body::Bytes;
 
 pub trait ObjectStore {
     const STORE_EXTENSION: &'static str = "store";
