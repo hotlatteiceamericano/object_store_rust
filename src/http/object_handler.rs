@@ -19,6 +19,10 @@ use crate::http::app_state::AppState;
 
 pub const SMALL_OBJECT_SIZE_THRESHOLD: usize = 30 * 1024;
 
+/// Storing objects with its bucket, prefix and file name
+/// It chooses different object store based on the object size
+/// Larger object uses StandaloneStore, save the object in standalone file
+/// Smaller object uses SegmentStore, append objects together in segment files
 pub async fn put_object(
     State(state): State<AppState>,
     AxumPath((bucket, key)): AxumPath<(String, String)>,
