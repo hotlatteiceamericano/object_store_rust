@@ -2,10 +2,7 @@ use axum::{
     Router,
     routing::{get, put},
 };
-
-use crate::http::{app_state::AppState, object_handler, root_handler};
-
-pub mod http;
+use object_store_rust::http::{app_state::AppState, object_handler, root_handler};
 
 #[tokio::main]
 async fn main() {

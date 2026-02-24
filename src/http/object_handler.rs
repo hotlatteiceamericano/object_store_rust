@@ -2,20 +2,21 @@ use std::path::Path;
 
 use anyhow::{Context, anyhow};
 use axum::{
+    Json,
     body::Bytes,
     extract::{Path as AxumPath, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use object_store_rust::{
+
+use crate::{
     common::store_type::StoreType,
+    http::{app_state::AppState, list_params::ListParams},
     store::{
         app_error::AppError, metadata::Metadata, object_store::ObjectStore,
         segment_store::SegmentStore, standalone_store::StandaloneStore,
     },
 };
-
-use crate::http::{app_state::AppState, list_params::ListParams, list_response::ListResponse};
 
 pub const SMALL_OBJECT_SIZE_THRESHOLD: usize = 30 * 1024;
 
@@ -103,7 +104,7 @@ pub async fn list_object(
     State(state): State<AppState>,
     AxumPath(bucket): AxumPath<String>,
     Query(params): Query<ListParams>,
-) -> Result<ListResponse, AppError> {
+) -> Result<Json<Vec<Metadata>>, AppError> {
     let metadata_list = Metadata::list(
         &state.db,
         &bucket,
@@ -112,17 +113,7 @@ pub async fn list_object(
     )
     .context("failed to find metadata during list")?;
 
-    let object_names: Vec<String> = metadata_list
-        .iter()
-        .map(|m| m.filename().to_string())
-        .collect();
-
-    Ok(ListResponse::new(
-        bucket,
-        params.prefix,
-        params.filename,
-        object_names,
-    ))
+    Ok(Json(metadata_list))
 }
 
 fn get_prefix_filename(key: &str) -> (Option<&str>, Option<&str>) {
@@ -135,7 +126,7 @@ fn get_prefix_filename(key: &str) -> (Option<&str>, Option<&str>) {
 
 #[cfg(test)]
 mod test {
-    use std::fs;
+    use std::{fs, vec};
 
     use axum::{
         Router,
@@ -145,7 +136,10 @@ mod test {
     use axum_test::TestServer;
     use rstest::{fixture, rstest};
 
-    use crate::http::{app_state::AppState, list_response::ListResponse, object_handler};
+    use crate::{
+        http::{app_state::AppState, object_handler},
+        store::metadata::Metadata,
+    };
 
     #[fixture]
     fn test_server() -> TestServer {
@@ -238,17 +232,18 @@ mod test {
         let response = test_server.get("/object/test_bucket").await;
 
         response.assert_status_ok();
-        let list_response = response.json::<ListResponse>();
-        assert_eq!(list_response.object_names.len(), 1);
-        assert_eq!(list_response.object_names.get(0).unwrap(), "test_text.txt");
+        let list_response = response.json::<Vec<Metadata>>();
+        assert_eq!(list_response.len(), 1);
+        for r in list_response {
+            r.test_assert(Metadata::new("test_bucket", "test_prefix", "test_text.txt"));
+        }
 
         test_server.put(url).bytes(image.clone()).await;
         let second_response = test_server.get("/object/test_bucket").await;
-        let second_list_response = second_response.json::<ListResponse>();
-        assert_eq!(second_list_response.object_names.len(), 2);
-        assert_eq!(
-            second_list_response.object_names.get(1).unwrap(),
-            "test_text.txt"
-        );
+        let second_list_response = second_response.json::<Vec<Metadata>>();
+        assert_eq!(second_list_response.len(), 2);
+        for r in second_list_response {
+            r.test_assert(Metadata::new("test_bucket", "test_prefix", "test_text.txt"));
+        }
     }
 }

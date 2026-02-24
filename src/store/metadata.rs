@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use sled::Db;
@@ -9,10 +7,10 @@ use crate::common::store_type::StoreType;
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Metadata {
     // object_id: Uuid,
-    bucket: String,
-    filename: String,
-    prefix: String,
-    store_type: Option<StoreType>,
+    pub bucket: String,
+    pub filename: String,
+    pub prefix: String,
+    pub store_type: Option<StoreType>,
 }
 
 impl Metadata {
@@ -100,8 +98,11 @@ impl Metadata {
         format!("{}/{}/{}", self.bucket, self.prefix, self.filename)
     }
 
-    fn get_key(bucket: &str, prefix: &str, filename: &str) -> String {
-        format!("{}/{}/{}", bucket, prefix, filename)
+    #[cfg(test)]
+    pub fn test_assert(&self, other: Metadata) -> bool {
+        self.bucket == other.bucket
+            && self.filename == other.filename
+            && self.prefix == other.prefix
     }
 }
 
