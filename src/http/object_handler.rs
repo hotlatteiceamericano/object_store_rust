@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{Context, anyhow};
 use axum::{
     body::Bytes,
-    extract::{Path as AxumPath, State},
+    extract::{Path as AxumPath, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -15,7 +15,7 @@ use object_store_rust::{
     },
 };
 
-use crate::http::app_state::AppState;
+use crate::http::{app_state::AppState, list_params::ListParams, list_response::ListResponse};
 
 pub const SMALL_OBJECT_SIZE_THRESHOLD: usize = 30 * 1024;
 
@@ -38,7 +38,12 @@ pub async fn put_object(
         store.save(&body).await
     }?;
 
-    let metadata = Metadata::new(&bucket, &prefix, &filename).with_store_type(store_type);
+    let metadata = Metadata::new(
+        &bucket,
+        &prefix.unwrap_or_default(),
+        &filename.unwrap_or_default(),
+    )
+    .with_store_type(store_type);
     metadata.save(&state.db)?;
 
     Ok(format!("successfully save metadata: {:?}", metadata))
@@ -53,9 +58,17 @@ pub async fn get_object(
     let (prefix, filename) = get_prefix_filename(&key);
 
     // this is the "error handler"
-    let metadata = Metadata::read(&state.db, &bucket, prefix, filename).context(format!(
+    let metadata = Metadata::read(
+        &state.db,
+        &bucket,
+        prefix.unwrap_or(""),
+        filename.unwrap_or_default(),
+    )
+    .context(format!(
         "failed to read metadata with bucket: {}, prefix: {}, filename: {}",
-        bucket, prefix, filename
+        bucket,
+        prefix.unwrap_or_default(),
+        filename.unwrap_or_default()
     ))?;
 
     // this is the "null handler"
@@ -85,31 +98,39 @@ pub async fn get_object(
     Ok(axum::body::Body::from_stream(stream).into_response())
 }
 
-fn get_prefix_filename(key: &str) -> (&str, &str) {
-    let std_path = Path::new(key);
-    let prefix = std_path.parent().and_then(|p| p.to_str()).unwrap_or("");
-    let filename = std_path
-        .file_name()
-        .and_then(|p| p.to_str())
-        .unwrap_or(&key);
+/// Given a bucket and a prefix, returning all the object names
+pub async fn list_object(
+    State(state): State<AppState>,
+    AxumPath(bucket): AxumPath<String>,
+    Query(params): Query<ListParams>,
+) -> Result<ListResponse, AppError> {
+    let metadata_list = Metadata::list(
+        &state.db,
+        &bucket,
+        params.prefix.as_deref(),
+        params.filename.as_deref(),
+    )
+    .context("failed to find metadata during list")?;
 
-    (prefix, filename)
+    let object_names: Vec<String> = metadata_list
+        .iter()
+        .map(|m| m.filename().to_string())
+        .collect();
+
+    Ok(ListResponse::new(
+        bucket,
+        params.prefix,
+        params.filename,
+        object_names,
+    ))
 }
 
-fn format_bytes(bytes: usize) -> String {
-    const UNITS: [&str; 6] = ["Bytes", "KB", "MB", "GB", "TB", "PB"];
+fn get_prefix_filename(key: &str) -> (Option<&str>, Option<&str>) {
+    let std_path = Path::new(key);
+    let prefix = std_path.parent().and_then(|p| p.to_str());
+    let filename = std_path.file_name().and_then(|p| p.to_str());
 
-    if bytes == 0 {
-        return "0 B".to_string();
-    }
-
-    let bytes_f64 = bytes as f64;
-    let exp = (bytes_f64.ln() / 1024_f64.ln()).floor() as usize;
-    let exp = exp.min(UNITS.len() - 1);
-
-    let value = bytes_f64 / 1024_f64.powi(exp as i32);
-
-    format!("{:.2} {}", value, UNITS[exp])
+    (prefix, filename)
 }
 
 #[cfg(test)]
@@ -124,7 +145,7 @@ mod test {
     use axum_test::TestServer;
     use rstest::{fixture, rstest};
 
-    use crate::http::{app_state::AppState, object_handler};
+    use crate::http::{app_state::AppState, list_response::ListResponse, object_handler};
 
     #[fixture]
     fn test_server() -> TestServer {
@@ -133,9 +154,11 @@ mod test {
             .open()
             .expect("cannot open a temporary db in object_handler::test");
         let app_state = AppState::new(db);
+        // todo: use the app from the main's one
         let app = Router::new()
             .route("/object/{bucket}/{*key}", get(object_handler::get_object))
             .route("/object/{bucket}/{*key}", put(object_handler::put_object))
+            .route("/object/{bucket}", get(object_handler::list_object))
             .with_state(app_state);
 
         TestServer::new(app).unwrap()
@@ -204,5 +227,28 @@ mod test {
         // todo: assert returned metadata
 
         get_response.assert_status_ok();
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn test_standalone_put_list(test_server: TestServer, image: Bytes) {
+        let url = "/object/test_bucket/test_prefix/test_text.txt";
+        test_server.put(url).bytes(image.clone()).await;
+
+        let response = test_server.get("/object/test_bucket").await;
+
+        response.assert_status_ok();
+        let list_response = response.json::<ListResponse>();
+        assert_eq!(list_response.object_names.len(), 1);
+        assert_eq!(list_response.object_names.get(0).unwrap(), "test_text.txt");
+
+        test_server.put(url).bytes(image.clone()).await;
+        let second_response = test_server.get("/object/test_bucket").await;
+        let second_list_response = second_response.json::<ListResponse>();
+        assert_eq!(second_list_response.object_names.len(), 2);
+        assert_eq!(
+            second_list_response.object_names.get(1).unwrap(),
+            "test_text.txt"
+        );
     }
 }
