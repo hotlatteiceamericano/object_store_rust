@@ -1,4 +1,7 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use axum::body::Bytes;
@@ -15,20 +18,24 @@ use crate::{
 /// store object in it until the active segment is full
 /// then rotate to a new segment
 pub struct SegmentStore {
+    path: PathBuf,
     active_segment: Segment<Blob>,
 }
 
 impl SegmentStore {
     const MAX_LENGTH: u64 = 1 * 1024;
-    pub fn new() -> Result<Self> {
-        let active_segment = Self::find_active_segment().context("cannot find active segment")?;
-        Ok(Self { active_segment })
+    pub fn new(path: PathBuf) -> Result<Self> {
+        let active_segment =
+            Self::find_active_segment(&path).context("cannot find active segment")?;
+        Ok(Self {
+            path: path,
+            active_segment,
+        })
     }
 
     /// Find the segment under store/segment/ which is not full yet
     /// If there are no segment found, will create a new one
-    fn find_active_segment() -> anyhow::Result<Segment<Blob>> {
-        let path = Self::path();
+    fn find_active_segment(path: &Path) -> anyhow::Result<Segment<Blob>> {
         if !path.exists() {
             fs::create_dir_all(&path).expect("cannot create parent directory for SegmentStore");
         }
@@ -62,7 +69,7 @@ impl SegmentStore {
     }
 
     fn rotate_segment(&mut self, new_base_offset: u64) -> anyhow::Result<()> {
-        self.active_segment = Segment::new(&Self::path(), new_base_offset)
+        self.active_segment = Segment::new(&self.path, new_base_offset)
             .context("failed to create a new segment during rotation")?;
         Ok(())
     }
@@ -94,13 +101,6 @@ impl ObjectStore for SegmentStore {
             offset: curr_offset,
         })
     }
-
-    fn path() -> PathBuf {
-        std::env::current_dir()
-            .unwrap()
-            .join("store")
-            .join("segment")
-    }
 }
 
 #[cfg(test)]
@@ -118,7 +118,11 @@ mod test {
 
     #[fixture]
     fn segment_store() -> SegmentStore {
-        SegmentStore::new().unwrap()
+        let test_path = std::env::current_dir()
+            .unwrap()
+            .join("test_store")
+            .join("segment");
+        SegmentStore::new(test_path).unwrap()
     }
 
     #[fixture]

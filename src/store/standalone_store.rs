@@ -12,10 +12,12 @@ use tokio_util::io::ReaderStream;
 
 use crate::{common::store_type::StoreType, store::object_store::ObjectStore};
 
-pub struct StandaloneStore {}
+pub struct StandaloneStore {
+    path: PathBuf,
+}
 impl StandaloneStore {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(path: PathBuf) -> Self {
+        Self { path }
     }
 
     fn gen_next_filename(path: &Path) -> anyhow::Result<String> {
@@ -47,21 +49,13 @@ impl StandaloneStore {
 }
 
 impl ObjectStore for StandaloneStore {
-    fn path() -> PathBuf {
-        std::env::current_dir()
-            .unwrap()
-            .join("store")
-            .join("standalone")
-    }
-
     async fn save(&mut self, bytes: &AxumBytes) -> anyhow::Result<StoreType> {
-        let path = Self::path();
-        if !path.exists() {
-            fs::create_dir_all(&path).context("not able to create parent path")?;
+        if !&self.path.exists() {
+            fs::create_dir_all(&self.path).context("not able to create parent path")?;
         }
 
-        let next_filename = Self::gen_next_filename(&path)?;
-        let next_file_path = path.join(next_filename);
+        let next_filename = Self::gen_next_filename(&self.path)?;
+        let next_file_path = self.path.join(next_filename);
 
         fs::write(&next_file_path, &bytes).context("failed to write binaries to the file")?;
 
@@ -74,7 +68,7 @@ impl ObjectStore for StandaloneStore {
 #[cfg(test)]
 pub mod test {
     use futures::StreamExt;
-    use rstest::rstest;
+    use rstest::{fixture, rstest};
     use tokio::fs;
 
     use crate::{
@@ -82,10 +76,18 @@ pub mod test {
         store::{object_store::ObjectStore, standalone_store::StandaloneStore},
     };
 
+    #[fixture]
+    fn standalone_store() -> StandaloneStore {
+        let test_path = std::env::current_dir()
+            .unwrap()
+            .join("test_store")
+            .join("standalone");
+        StandaloneStore::new(test_path)
+    }
+
     #[rstest]
     #[tokio::test]
-    async fn test_save_and_open() {
-        let mut standalone_store = StandaloneStore::new();
+    async fn test_save_and_open(mut standalone_store: StandaloneStore) {
         let bytes = fs::read(
             std::env::current_dir()
                 .unwrap()

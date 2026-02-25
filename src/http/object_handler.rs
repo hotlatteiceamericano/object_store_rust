@@ -32,10 +32,10 @@ pub async fn put_object(
     let (prefix, filename) = get_prefix_filename(&key);
 
     let store_type = if body.len() <= SMALL_OBJECT_SIZE_THRESHOLD {
-        let mut segment_store = SegmentStore::new()?;
+        let mut segment_store = SegmentStore::new(state.config.segment_path)?;
         segment_store.save(&body).await
     } else {
-        let mut store = StandaloneStore::new();
+        let mut store = StandaloneStore::new(state.config.standalone_path);
         store.save(&body).await
     }?;
 
@@ -126,7 +126,7 @@ fn get_prefix_filename(key: &str) -> (Option<&str>, Option<&str>) {
 
 #[cfg(test)]
 mod test {
-    use std::{fs, vec};
+    use std::fs;
 
     use axum::{
         Router,
@@ -137,17 +137,31 @@ mod test {
     use rstest::{fixture, rstest};
 
     use crate::{
-        http::{app_state::AppState, object_handler},
+        http::{app_state::AppState, config::Config, object_handler},
         store::metadata::Metadata,
     };
 
     #[fixture]
     fn test_server() -> TestServer {
+        let test_path = std::env::current_dir().unwrap().join("test_store");
+        let test_config = Config::new(
+            test_path
+                .join("segment")
+                .to_str()
+                .map(String::from)
+                .unwrap(),
+            test_path
+                .join("standalone")
+                .to_str()
+                .map(String::from)
+                .unwrap(),
+        );
         let db = sled::Config::new()
             .temporary(true)
             .open()
             .expect("cannot open a temporary db in object_handler::test");
-        let app_state = AppState::new(db);
+        let app_state = AppState::new(db, test_config);
+
         // todo: use the app from the main's one
         let app = Router::new()
             .route("/object/{bucket}/{*key}", get(object_handler::get_object))

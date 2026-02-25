@@ -2,13 +2,18 @@ use axum::{
     Router,
     routing::{get, put},
 };
-use object_store_rust::http::{app_state::AppState, object_handler, root_handler};
+use object_store_rust::http::{app_state::AppState, config::Config, object_handler, root_handler};
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
     let db = sled::open("my_db").expect("not able to open my_db");
-    let app_state = AppState::new(db);
+    let config = Config::new(
+        std::env::var("OBJECT_STORE_SEGMENT_PATH").expect("OBJECT_STORE_SEGMENT_PATH required"),
+        std::env::var("OBJECT_STORE_STANDALONE_PATH")
+            .expect("OBJECT_STORE_STANDALONE_PATH required"),
+    );
+    let app_state = AppState::new(db, config);
 
     let app = Router::new()
         .route("/", get(root_handler::handle()))
