@@ -2,7 +2,7 @@ S3-Like Object Store
 
 # Object Store
 ## SegmentStore
-It stores objects smaller than 30KB. Each physical files has its overhead and it is wasteful to create new file for the storing of small objects. Hence they are stored together within the same file called Segments, until the size of segment reaches a defined threshold.
+It stores objects smaller than 1KB. Each physical files has its overhead and it is wasteful to create new file for the storing of small objects. Hence they are appended and stored together within the same file called Segments, until the size of segment reaches a defined threshold.
 
 Since SegmentStore stores the active segment in it as a field, the instantiation is more expensive than the other type of store - StandaloneStore. Hence SegmentStore is instantiated once during the app starting and being save in the axum state.
 
@@ -15,7 +15,7 @@ When a segment is full, it rotates to a new segment.
 It returns the metadata for this object.
 
 ### open()
-As the active segment is found during the initialization, it can call the active segment's read method directly to read the object.
+SegmentStore finds the active segment file from its field, and call the active segmnet's find method to read the binary, and output to the caller as stream.
 
 ## StandaloneStore
 As opposed to SegmentStore, it stores larger objects in standalone file. As the object becomes larger, metadata for physical files become less wasteful compared to smaller objects.
@@ -25,8 +25,8 @@ It returns the metadata for this object.
 ### save()
 As oppose to SegmentStore who needs to store an active segment in it as a field, StandaloneStore is a state-less struct which perform on-and-off action. Hence axum handler instantiate a new StandaloneStore instance in every save request.
 
-### open()
-
+### open(path: Path)
+Read the binary from the given path and output it as stream.
 
 # Metadata Store
 * use sled, Rust's embedded key-value store, suitable for prefix search
@@ -46,30 +46,33 @@ As oppose to SegmentStore who needs to store an active segment in it as a field,
     * Standalone:
       * file_path: PathBuf
 
-## Save()
+## save()
 Save to database using sled. Returning Result<>.
 
-## Read()
+## read()
 *Static* method to return the metadata given bucket, prefix and filename.
 
+## list()
+Takes mandatory bucket, optional prefix and optional filename, return list of metadata.
+
 # HTTP Layer
-## Save
-Iimplemented with HTTP PUT method. It asks for for bucket, prefix, filename and the object binary as arguments.
+## save
+Implemented with HTTP PUT method. It asks for for bucket, prefix, filename and the object binary as arguments.
 
 Depends on the object size, it uses different types of object store to store the object.
 
-## Read
+## read
 Implemented with HTTP GET method. It asks for bucket, prefix and filenames to find the metadata of an object.
 
 It then finds the object store from the metadata, and call the matching object store, SegmentStore or StandaloneStore, to fetch the object.
 
-## List
+## list
 HTTP GET, ask for bucket, an optional prefix as arguments. Return a list of filename.
 
 It finds a list of metadata by the given bucket and prefix. Then return those metadata.
 
 ## Write Path
-(better with a diagram to luustrate)
+(better with a diagram to illustrate)
 main > http handlers > decide standalone or segement store based on file size > object store
 
 # Future Phases
@@ -80,15 +83,3 @@ main > http handlers > decide standalone or segement store based on file size > 
   * The second one would be *buffering* the write request in RAM. And flush the write request to hard disk when necessary.
 
 
-# TODOs
-1. [x] implement standalone store's read
-1. [x] refactor standalone with async
-1. [x] implement Metadata::save
-1. [x] implement Metadata::read
-1. [x] then implement object's read handler, so that it can locate the object with bucket, prefix and filename
-1. [x] read again the object_handler::get_object function => 
-       AI uses Option::context to convert all the Options to Results
-1. [] write tests for Metadata::read
-1. [] write tests for ObjectHandler::get_object
-1. [] refactor object store's save with async
-1. [] 
