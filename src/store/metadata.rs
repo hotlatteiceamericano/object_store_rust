@@ -38,7 +38,7 @@ impl Metadata {
     }
 
     pub fn save(&self, db: &Db) -> anyhow::Result<()> {
-        let key = self.key();
+        let key = Self::key(&self.bucket, Some(&self.prefix), Some(&self.filename));
         let bytes = bincode::serialize(self).context("failed to serialize metadata")?;
         db.insert(key.as_bytes(), bytes)
             .context("failed to insert metadata to db")?;
@@ -54,7 +54,7 @@ impl Metadata {
         prefix: &str,
         filename: &str,
     ) -> anyhow::Result<Option<Self>> {
-        let key = format!("{}/{}/{}", bucket, prefix, filename);
+        let key = Self::key(bucket, Some(prefix), Some(filename));
         let bytes = db
             .get(key.as_bytes())
             .context("cannot find the metadata from db")?;
@@ -94,8 +94,15 @@ impl Metadata {
         Ok(metadata)
     }
 
-    fn key(&self) -> String {
-        format!("{}/{}/{}", self.bucket, self.prefix, self.filename)
+    fn key(bucket: &str, prefix: Option<&str>, filename: Option<&str>) -> String {
+        let mut key = bucket.to_string();
+        if prefix.is_some() {
+            key = format!("{}/{}", key, &prefix.unwrap());
+        }
+        if filename.is_some() {
+            key = format!("{}/{}", key, filename.unwrap());
+        }
+        key
     }
 
     #[cfg(test)]

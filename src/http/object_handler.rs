@@ -196,42 +196,30 @@ mod test {
     async fn test_standalone_put_get(test_server: TestServer, image: Bytes) {
         let put_response = test_server
             .put("/object/test_bucket/test_prefix/test_filename.txt")
-            .bytes(image)
+            .bytes(image.clone())
             .await;
         put_response.assert_status_ok();
 
-        let read_response = test_server
+        let get_response = test_server
             .get("/object/test_bucket/test_prefix/test_filename.txt")
             .await;
-        read_response.assert_status_ok();
 
-        let metadata_response = read_response.json::<Vec<Metadata>>();
-        assert_eq!(
-            metadata_response,
-            vec![Metadata::new(
-                "test_bucket",
-                "test_prefix",
-                "test_filename.txt"
-            )]
-        );
+        get_response.assert_status_ok();
+        assert_eq!(image, get_response.as_bytes())
     }
 
     #[rstest]
     #[tokio::test]
     async fn test_segment_put_get(test_server: TestServer, text: Bytes) {
         let url = "/object/test_bucket/test_prefix/test_text.txt";
-        let put_response = test_server.put(url).bytes(text).await;
+        let put_response = test_server.put(url).bytes(text.clone()).await;
 
         put_response.assert_status_ok();
 
         let get_response = test_server.get(url).await;
         get_response.assert_status_ok();
 
-        let metadata_response = get_response.json::<Vec<Metadata>>();
-        assert_eq!(
-            metadata_response,
-            vec![Metadata::new("test_bucket", "test_prefix", "test_text.txt")]
-        );
+        assert_eq!(text, get_response.as_bytes());
     }
 
     #[rstest]
@@ -241,20 +229,40 @@ mod test {
         test_server.put(url).bytes(image.clone()).await;
 
         let response = test_server.get("/object/test_bucket").await;
-
         response.assert_status_ok();
+
         let list_response = response.json::<Vec<Metadata>>();
         assert_eq!(list_response.len(), 1);
         for r in list_response {
             r.test_assert(Metadata::new("test_bucket", "test_prefix", "test_text.txt"));
         }
 
-        test_server.put(url).bytes(image.clone()).await;
+        test_server
+            .put("/object/test_bucket/another_test_prefix/another_test_filename.txt")
+            .bytes(image.clone())
+            .await;
         let second_response = test_server.get("/object/test_bucket").await;
+
         let second_list_response = second_response.json::<Vec<Metadata>>();
         assert_eq!(second_list_response.len(), 2);
-        for r in second_list_response {
-            r.test_assert(Metadata::new("test_bucket", "test_prefix", "test_text.txt"));
-        }
     }
 }
+
+// macro_rules! assert_vec_eq_unordered {
+//     ($actual: expr, $expected: expr) => {{
+//         let count = |v: &[_]| -> std::collections::HashMap<_, usize> {
+//             let mut map = std::collections::HashMap::new();
+//             for item in v {
+//                 *map.entry(item).or_insert(0) += 1;
+//             }
+//             map
+//         };
+//         let actual_counts = count(&$actual);
+//         let expected_counts = count(&$expected);
+//         assert_eq!(
+//             actual_counts, expected_counts,
+//             "\nVecs differ (order-independent): \n left: {:?}\n right: {:?}",
+//             $actual, $expected
+//         );
+//     }};
+// }
