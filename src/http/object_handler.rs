@@ -99,7 +99,7 @@ pub async fn get_object(
     Ok(axum::body::Body::from_stream(stream).into_response())
 }
 
-/// Given a bucket and a prefix, returning all the object names
+/// Given a bucket and a prefix, returning matched metadata
 pub async fn list_object(
     State(state): State<AppState>,
     AxumPath(bucket): AxumPath<String>,
@@ -198,15 +198,22 @@ mod test {
             .put("/object/test_bucket/test_prefix/test_filename.txt")
             .bytes(image)
             .await;
-
         put_response.assert_status_ok();
-        // todo: assert returned metadata
 
         let read_response = test_server
             .get("/object/test_bucket/test_prefix/test_filename.txt")
             .await;
-
         read_response.assert_status_ok();
+
+        let metadata_response = read_response.json::<Vec<Metadata>>();
+        assert_eq!(
+            metadata_response,
+            vec![Metadata::new(
+                "test_bucket",
+                "test_prefix",
+                "test_filename.txt"
+            )]
+        );
     }
 
     #[rstest]
@@ -218,9 +225,13 @@ mod test {
         put_response.assert_status_ok();
 
         let get_response = test_server.get(url).await;
-        // todo: assert returned metadata
-
         get_response.assert_status_ok();
+
+        let metadata_response = get_response.json::<Vec<Metadata>>();
+        assert_eq!(
+            metadata_response,
+            vec![Metadata::new("test_bucket", "test_prefix", "test_text.txt")]
+        );
     }
 
     #[rstest]
