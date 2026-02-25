@@ -11,3 +11,4 @@
 7. store layer to only return Box<Stream>. It is handler's responsibility to return axum::IntoResponse but not store layer.
 8. anyhow also supports Option, which convert it to Result
 9. Chainable setter of course!
+10. Which type should I use in constructor? an Owned value or a reference? An owned value means perhaps there are no cloning, a reference means it definitely involve cloning but easier for client to use
