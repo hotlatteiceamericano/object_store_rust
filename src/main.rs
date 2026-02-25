@@ -8,11 +8,7 @@ use object_store_rust::http::{app_state::AppState, config::Config, object_handle
 async fn main() {
     tracing_subscriber::fmt::init();
     let db = sled::open("my_db").expect("not able to open my_db");
-    let config = Config::new(
-        std::env::var("OBJECT_STORE_SEGMENT_PATH").expect("OBJECT_STORE_SEGMENT_PATH required"),
-        std::env::var("OBJECT_STORE_STANDALONE_PATH")
-            .expect("OBJECT_STORE_STANDALONE_PATH required"),
-    );
+    let config = Config::new(std::env::var("STORE_PATH").expect("STORE_PATH required"));
     let app_state = AppState::new(db, config);
 
     let app = Router::new()

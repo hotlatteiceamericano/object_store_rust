@@ -32,10 +32,10 @@ pub async fn put_object(
     let (prefix, filename) = get_prefix_filename(&key);
 
     let store_type = if body.len() <= SMALL_OBJECT_SIZE_THRESHOLD {
-        let mut segment_store = SegmentStore::new(state.config.segment_path)?;
+        let mut segment_store = SegmentStore::new(state.config.segment_path())?;
         segment_store.save(&body).await
     } else {
-        let mut store = StandaloneStore::new(state.config.standalone_path);
+        let mut store = StandaloneStore::new(state.config.standalone_path());
         store.save(&body).await
     }?;
 
@@ -144,18 +144,7 @@ mod test {
     #[fixture]
     fn test_server() -> TestServer {
         let test_path = std::env::current_dir().unwrap().join("test_store");
-        let test_config = Config::new(
-            test_path
-                .join("segment")
-                .to_str()
-                .map(String::from)
-                .unwrap(),
-            test_path
-                .join("standalone")
-                .to_str()
-                .map(String::from)
-                .unwrap(),
-        );
+        let test_config = Config::new(test_path.to_str().unwrap().to_string());
         let db = sled::Config::new()
             .temporary(true)
             .open()
