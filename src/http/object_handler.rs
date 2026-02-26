@@ -143,8 +143,12 @@ mod test {
 
     #[fixture]
     fn test_server() -> TestServer {
-        let test_path = std::env::current_dir().unwrap().join("test_store");
-        let test_config = Config::new(test_path.to_str().unwrap().to_string());
+        let test_store_path = std::env::current_dir().unwrap().join("test_store");
+        let test_db_path = std::env::current_dir().unwrap().join("test_db");
+        let test_config = Config::new(
+            test_store_path.to_str().unwrap().to_string(),
+            test_db_path.to_str().unwrap().to_string(),
+        );
         let db = sled::Config::new()
             .temporary(true)
             .open()

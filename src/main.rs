@@ -7,8 +7,11 @@ use object_store_rust::http::{app_state::AppState, config::Config, object_handle
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
-    let db = sled::open("my_db").expect("not able to open my_db");
-    let config = Config::new(std::env::var("STORE_PATH").expect("STORE_PATH required"));
+    let config = Config::new(
+        std::env::var("STORE_PATH").expect("STORE_PATH required"),
+        std::env::var("DB_PATH").expect("DB_PATH required"),
+    );
+    let db = sled::open(&config.db_path).expect("not able to open my_db");
     let app_state = AppState::new(db, config);
 
     let app = Router::new()
@@ -18,9 +21,7 @@ async fn main() {
         .route("/object/{bucket}", get(object_handler::list_object))
         .with_state(app_state);
 
-    let listner = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
+    let listner = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
     axum::serve(listner, app).await.unwrap();
 }
