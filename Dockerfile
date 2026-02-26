@@ -5,8 +5,14 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
-COPY . .
+# Copy manifests and build dependencies with dummy source
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src && echo "fn main() {}" > src/main.rs && echo "" > src/lib.rs
+RUN cargo build --release
+RUN rm -rf src
 
+# Copy actual source and rebuild
+COPY src ./src
 RUN cargo build --release
 
 # Runtime stage
