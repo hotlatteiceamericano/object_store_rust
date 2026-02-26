@@ -23,5 +23,6 @@ async fn main() {
 
     let listner = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
+    println!("starting object storage server");
     axum::serve(listner, app).await.unwrap();
 }
