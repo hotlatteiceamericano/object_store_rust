@@ -32,4 +32,4 @@ EXPOSE 3000
 CMD ["object_store_rust"]
 
 # example run command:
-# docuker run -p 3000:3000 -v /mnt/disk/store:/data/store -v /mnt/ssd/db:/data/db object-store
+# docker run -p 3000:3000 -e STORE_PATH=~/Projects/object_store/ -e DB_PATH=~/Projects/object_store/ -e UPSTASH_URL= UPSTASH_TOKEN= object-store
