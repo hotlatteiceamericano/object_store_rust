@@ -153,7 +153,13 @@ mod test {
             .temporary(true)
             .open()
             .expect("cannot open a temporary db in object_handler::test");
-        let app_state = AppState::new(db, test_config);
+        let app_state = AppState::new(
+            db,
+            test_config,
+            reqwest::Client::new(),
+            String::new(),
+            String::new(),
+        );
 
         // todo: use the app from the main's one
         let app = Router::new()
