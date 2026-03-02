@@ -75,11 +75,16 @@ It finds a list of metadata by the given bucket and prefix. Then return those me
 (better with a diagram to illustrate)
 main > http handlers > decide standalone or segement store based on file size > object store
 
-# Future Phases
+# Future Extensions
+## Features:
 * Support range read
 * Support versioning
-* Scale:
-  * The first one would be sharding to many different servers. Only if two requests routed to the same shard will be locked.
-  * The second one would be *buffering* the write request in RAM. And flush the write request to hard disk when necessary.
+
+## Scaling:
+* metadata migrate from embedded sled to a relational/nosql database
+* decouple the storage layer from storage layer. when API layer receives write request, it founds an available server to write the data
+
+## Deployment
+It uses GitHub's workflow to build the docker image, and push to GitHub's image registry: GHCR. It then uses the GitHub action provided by fly "flyctl" to run the deployment command, provide with the registry's location.
 
 
