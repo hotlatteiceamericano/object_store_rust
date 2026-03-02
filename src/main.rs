@@ -1,6 +1,5 @@
 use axum::{
-    Router,
-    middleware,
+    Router, middleware,
     routing::{get, put},
 };
 use object_store_rust::http::{
@@ -26,18 +25,21 @@ async fn main() {
     // Protected routes — require API key
     let protected = Router::new()
         .route("/object/{bucket}/{*key}", put(object_handler::put_object))
-        .route("/object/{bucket}/{*key}", get(object_handler::get_object))
-        .route("/object/{bucket}", get(object_handler::list_object))
-        .layer(middleware::from_fn_with_state(app_state.clone(), auth_middleware));
+        .layer(middleware::from_fn_with_state(
+            app_state.clone(),
+            auth_middleware,
+        ));
 
     // Public routes + protected routes merged
     let app = Router::new()
         .route("/", get(root_handler::handle()))
+        .route("/object/{bucket}/{*key}", get(object_handler::get_object))
+        .route("/object/{bucket}", get(object_handler::list_object))
         .merge(protected)
         .with_state(app_state);
 
     let listner = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
-    println!("starting object storage server");
+    println!(" [object store rust] starting object storage server");
     axum::serve(listner, app).await.unwrap();
 }
