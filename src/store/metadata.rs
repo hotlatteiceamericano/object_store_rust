@@ -6,7 +6,6 @@ use crate::common::store_type::StoreType;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Metadata {
-    // object_id: Uuid,
     pub bucket: String,
     pub filename: String,
     pub prefix: String,
@@ -16,7 +15,6 @@ pub struct Metadata {
 impl Metadata {
     pub fn new(bucket: &str, prefix: &str, filename: &str) -> Self {
         Self {
-            // object_id: Uuid::new_v4(),
             bucket: String::from(bucket),
             prefix: String::from(prefix),
             filename: String::from(filename),
